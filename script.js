@@ -1,11 +1,11 @@
 // Firebase configuration and initialization
 const firebaseConfig = {
-  apiKey: "AIzaSyAC_Xt-Nyz4_jfzEBbqUZfCLf__-wnXaLQ",
-  authDomain: "rsr-templates.firebaseapp.com",
-  projectId: "rsr-templates",
-  storageBucket: "rsr-templates.appspot.com",
-  messagingSenderId: "234762099768",
-  appId: "1:234762099768:web:fdef26741b469db1089acd"
+    apiKey: "AIzaSyAC_Xt-Nyz4_jfzEBbqUZfCLf__-wnXaLQ",
+    authDomain: "rsr-templates.firebaseapp.com",
+    projectId: "rsr-templates",
+    storageBucket: "rsr-templates.appspot.com",
+    messagingSenderId: "234762099768",
+    appId: "1:234762099768:web:fdef26741b469db1089acd"
 };
 
 // Initialize Firebase
@@ -24,45 +24,60 @@ let isSidebarListVisible = false;
 // Load data from Firebase
 async function loadData() {
     try {
-      console.log("Attempting to load data from Firestore...");
-      const doc = await db.collection('appData').doc('currentData').get();
-      console.log("Document exists:", doc.exists);
-      if (doc.exists) {
-        const data = doc.data();
-        console.log("Loaded data:", data);
-        cars = data.cars || [];
-        taxis = data.taxis || [];
-        hotels = data.hotels || [];
-        packages = data.packages || [];
-        templates = data.templates || {};
-      } else {
-        console.log("No document found, saving default data...");
-        await saveAllData();
-      }
+        console.log("Attempting to load data from Firestore...");
+        const doc = await db.collection('appData').doc('currentData').get();
+        console.log("Document exists:", doc.exists);
+        if (doc.exists) {
+            const data = doc.data();
+            console.log("Loaded data:", data);
+            cars = data.cars || [];
+            taxis = data.taxis || [];
+            hotels = data.hotels || [];
+            packages = data.packages || [];
+            templates = {};
+            // Convert templates to new format
+            for (const [key, value] of Object.entries(data.templates || {})) {
+                if (typeof value === 'string') {
+                    templates[key] = { body: value, excelInfo: [], steps: [] };
+                } else {
+                    templates[key] = {
+                        body: value.body || '',
+                        excelInfo: value.excelInfo || [],
+                        steps: value.steps || []
+                    };
+                }
+            }
+        } else {
+            console.log("No document found, saving default data...");
+            await saveAllData();
+        }
     } catch (error) {
-      console.error("Error loading data:", error);
-      cars = defaultData.cars;
-      taxis = defaultData.taxis;
-      hotels = defaultData.hotels;
-      packages = defaultData.packages;
-      templates = defaultData.templates;
+        console.error("Error loading data:", error);
+        cars = defaultData.cars || [];
+        taxis = defaultData.taxis || [];
+        hotels = defaultData.hotels || [];
+        packages = defaultData.packages || [];
+        templates = {};
+        for (const [key, value] of Object.entries(defaultData.templates || {})) {
+            templates[key] = { body: value, excelInfo: [], steps: [] };
+        }
     }
 }
 
 // Save all data to Firebase
 async function saveAllData() {
     try {
-      await db.collection('appData').doc('currentData').set({
+    await db.collection('appData').doc('currentData').set({
         cars,
         taxis,
         hotels,
         packages,
         templates
-      });
-      console.log("Data saved successfully");
+    });
+    console.log("Data saved successfully");
     } catch (error) {
-      console.error("Error saving data:", error);
-      alert("Error saving data to database");
+    console.error("Error saving data:", error);
+    alert("Error saving data to database");
     }
 }
 
@@ -91,7 +106,8 @@ function showScreen(screenId) {
 
     // Load dropdowns when switching screens
     if (screenId === 'templates') {
-        loadTemplateDropdown(); // Ensure this is called
+        loadTemplateDropdown(); // Ensure dropdown is populated
+        showFields(); // Refresh fields if a template is selected
     }
     if (screenId === 'editTemplates') {
         loadEditTemplatesDropdown();
@@ -111,10 +127,10 @@ function toggleEditList() {
 
 function loadTemplateDropdown() {
     const select = document.getElementById('emailType');
+    select.innerHTML = '<option value="">-- Select a Template --</option>';
     // Ensure templates are sorted alphabetically
     const sortedTemplates = Object.keys(templates).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
-    select.innerHTML = '<option value="">-- Select a Template --</option>' + 
-        sortedTemplates.map(key => `<option value="${key}">${key}</option>`).join('');
+    select.innerHTML += sortedTemplates.map(key => `<option value="${key}">${key}</option>`).join('');
 }
 
 function showFields() {
@@ -126,149 +142,80 @@ function showFields() {
     if (!emailType) return;
 
     const template = templates[emailType];
-    const placeholders = extractPlaceholders(template);
+    const templateBody = template.body || '';
+    const excelInfo = template.excelInfo || [];
+    const steps = template.steps || [];
+
+    // Collect all placeholders uniquely
+    let placeholders = extractPlaceholders(templateBody);
+    excelInfo.forEach(col => {
+        if (col.value) {
+            placeholders.push(...extractPlaceholders(col.value));
+        }
+    });
+    steps.forEach(step => {
+        if (step.description) {
+            placeholders.push(...extractPlaceholders(step.description));
+        }
+    });
+
+    // Remove duplicates immediately
+    placeholders = [...new Set(placeholders)].sort();
 
     let fields = '';
-    
-    // Handle existing templates for backward compatibility
-    switch (emailType) {
-        default:
-            // Dynamic fields for new templates
-            const hasDate1 = placeholders.includes('Date1') || placeholders.includes('Day1') || placeholders.includes('Month1') || placeholders.includes('Year1');
-            const hasDate2 = placeholders.includes('Date2') || placeholders.includes('Day2') || placeholders.includes('Month2') || placeholders.includes('Year2');
-            const hasDateNUR = placeholders.includes('dateNUR') || placeholders.includes('dayNUR') || placeholders.includes('monthNUR') || placeholders.includes('yearNUR');
-            const hasDateSPA = placeholders.includes('dateSPA') || placeholders.includes('daySPA') || placeholders.includes('monthSPA') || placeholders.includes('yearSPA');
-            const hasSingleDate = placeholders.includes('date') || placeholders.includes('day') || placeholders.includes('month') || placeholders.includes('year');
 
-            placeholders.forEach(placeholder => {
-                const id = placeholder;
-                const label = placeholder.charAt(0).toUpperCase() + placeholder.slice(1);
-                if (placeholder === 'car') {
-                    fields += `
-                        <label for="${id}">Car:</label>
-                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                        <datalist id="${id}-list">
-                            ${cars.map(car => `<option value="${car.name}">`).join('')}
-                        </datalist>
-                    `;
-                } else if (placeholder === 'car1') {
-                    fields += `
-                        <label for="${id}">Car 1:</label>
-                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                        <datalist id="${id}-list">
-                            ${cars.map(car => `<option value="${car.name}">`).join('')}
-                        </datalist>
-                    `;
-                } else if (placeholder === 'car2') {
-                    fields += `
-                        <label for="${id}">Car 2:</label>
-                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                        <datalist id="${id}-list">
-                            ${cars.map(car => `<option value="${car.name}">`).join('')}
-                        </datalist>
-                    `;
-                } else if (placeholder === 'carSPA') {
-                    fields += `
-                        <label for="${id}">Car Spa:</label>
-                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                        <datalist id="${id}-list">
-                            ${cars.map(car => `<option value="${car.name}">`).join('')}
-                        </datalist>
-                    `;
-                } else if (placeholder === 'carNUR') {
-                    fields += `
-                        <label for="${id}">Car Nur:</label>
-                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                        <datalist id="${id}-list">
-                            ${cars.map(car => `<option value="${car.name}">`).join('')}
-                        </datalist>
-                    `;
-                } else if (placeholder === 'taxi') {
-                    fields += `
-                        <label for="${id}">Taxi:</label>
-                        <select id="${id}">${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}</select>
-                    `;
-                } else if (placeholder === 'hotel') {
-                    fields += `
-                        <label for="${id}">Hotel:</label>
-                        <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}</select>
-                        <label for="${id}Email">Hotel Email:</label>
-                        <input type="email" id="${id}Email" readonly>
-                    `;
-                } else if (placeholder === 'package') {
-                    fields += `
-                        <label for="${id}">Package:</label>
-                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
-                    `;
-                } else if (placeholder === 'packageSPA') {
-                    fields += `
-                        <label for="${id}">Package Spa:</label>
-                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
-                    `;
-                } else if (placeholder === 'packageNUR') {
-                    fields += `
-                        <label for="${id}">Package Nur:</label>
-                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
-                    `;
-                } else if (hasDate1 && (placeholder === 'Date1' || placeholder === 'Day1' || placeholder === 'Month1' || placeholder === 'Year1')) {
-                    if (!fields.includes('id="date1"')) {
-                        fields += `
-                            <label for="date1">Date 1:</label>
-                            <input type="date" id="date1">
-                        `;
-                    }
-                } else if (hasDate2 && (placeholder === 'Date2' || placeholder === 'Day2' || placeholder === 'Month2' || placeholder === 'Year2')) {
-                    if (!fields.includes('id="date2"')) {
-                        fields += `
-                            <label for="date2">Date 2:</label>
-                            <input type="date" id="date2">
-                        `;
-                    }
-                } else if (hasDateSPA && (placeholder === 'dateSPA' || placeholder === 'daySPA' || placeholder === 'monthSPA' || placeholder === 'yearSPA')) {
-                    if (!fields.includes('id="dateSPA"')) {
-                        fields += `
-                            <label for="dateSPA">Date Spa:</label>
-                            <input type="date" id="dateSPA">
-                        `;
-                    }
-                } else if (hasDateNUR && (placeholder === 'dateNUR' || placeholder === 'dayNUR' || placeholder === 'monthNUR' || placeholder === 'yearNUR')) {
-                    if (!fields.includes('id="dateNUR"')) {
-                        fields += `
-                            <label for="dateNUR">Date Nur:</label>
-                            <input type="date" id="dateNUR">
-                        `;
-                    }
-                } else if (hasSingleDate && (placeholder === 'date' || placeholder === 'day' || placeholder === 'month' || placeholder === 'year') && !hasDate1 && !hasDate2) {
-                    if (!fields.includes('id="date"')) {
-                        fields += `
-                            <label for="date">Date:</label>
-                            <input type="date" id="date">
-                        `;
-                    }
-                } else if (placeholder.includes('time') && placeholder !== 'arrivalTime' && placeholder !== 'firstTime' && placeholder !== 'lastTime') {
-                    fields += `
-                        <label for="${id}">${label} (e.g., 08:00):</label>
-                        <input type="text" id="${id}" placeholder="e.g., 08:00">
-                    `;
-                } else if (placeholder === 'firstTime' || placeholder === 'lastTime') {
-                    fields += `
-                        <label for="${id}">${label} (e.g., 08:00):</label>
-                        <input type="text" id="${id}" placeholder="e.g., 08:00">
-                    `;
-                } else if (placeholder === 'kms' || placeholder === 'Laps') {
-                    fields += `
-                        <label for="${id}">${label}:</label>
-                        <input type="number" id="${id}" min="0" step="1">
-                    `;
-                } else if (placeholder !== 'arrivalTime' && placeholder !== 'depositSection') {
-                    fields += `
-                        <label for="${id}">${label}:</label>
-                        <input type="text" id="${id}">
-                    `;
-                }
-            });
-            break;
-    }
+    // Generate input fields for unique placeholders
+    placeholders.forEach(placeholder => {
+        const id = placeholder;
+        const label = placeholder.charAt(0).toUpperCase() + placeholder.slice(1);
+        if (placeholder === 'car' || placeholder === 'car1' || placeholder === 'car2' || placeholder === 'carSPA' || placeholder === 'carNUR') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                <datalist id="${id}-list">
+                    ${cars.map(car => `<option value="${car.name}">`).join('')}
+                </datalist>
+            `;
+        } else if (placeholder === 'taxi') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}">${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}</select>
+            `;
+        } else if (placeholder === 'hotel') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}</select>
+                <label for="${id}Email">Hotel Email:</label>
+                <input type="email" id="${id}Email" readonly>
+            `;
+        } else if (placeholder === 'package' || placeholder === 'packageSPA' || placeholder === 'packageNUR') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
+            `;
+        } else if (['date', 'date1', 'date2', 'dateSPA', 'dateNUR'].includes(placeholder)) {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="date" id="${id}">
+            `;
+        } else if (placeholder.includes('time') || placeholder === 'firstTime' || placeholder === 'lastTime') {
+            fields += `
+                <label for="${id}">${label} (e.g., 08:00):</label>
+                <input type="text" id="${id}" placeholder="e.g., 08:00">
+            `;
+        } else if (placeholder === 'kms' || placeholder === 'Laps') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="number" id="${id}" min="0" step="1">
+            `;
+        } else if (placeholder !== 'arrivalTime' && placeholder !== 'depositSection' && !placeholder.includes('day') && !placeholder.includes('month') && !placeholder.includes('year') && placeholder !== 'originalexcess' && placeholder !== 'insuranceexcess' && placeholder !== 'insuranceprice') {
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="text" id="${id}">
+            `;
+        }
+    });
+
     fieldsDiv.innerHTML = fields;
 }
 
@@ -288,16 +235,33 @@ function autoFillHotelEmail() {
 
 function generateEmail() {
     const emailType = document.getElementById('emailType').value;
-    let subject = `RSRNurburg Email`;
-    let body = templates[emailType] || '';
+    if (!emailType) {
+        alert('Please select a template.');
+        return;
+    }
 
-    const placeholders = extractPlaceholders(body);
-    let values = {};
+    let subject = `RSRNurburg Email`;
+    let template = templates[emailType] || { body: '', excelInfo: [], steps: [] };
+    let body = template.body || '';
+
+    // Collect unique placeholders
+    let placeholders = extractPlaceholders(template.body || '');
+    (template.excelInfo || []).forEach(col => {
+        if (col.value) placeholders.push(...extractPlaceholders(col.value));
+    });
+    (template.steps || []).forEach(step => {
+        if (step.description) placeholders.push(...extractPlaceholders(step.description));
+    });
+    const uniquePlaceholders = [...new Set(placeholders)];
 
     // Collect values from input fields
+    let values = {};
+    let missingFields = [];
     document.querySelectorAll('#fields input, #fields select').forEach(input => {
-        values[input.id] = input.value;
-        // Validate car fields
+        if (input.value.trim() === '') {
+            missingFields.push(input.id);
+        }
+        values[input.id] = input.value.trim();
         if (['car', 'car1', 'car2', 'carSPA', 'carNUR'].includes(input.id)) {
             const carExists = cars.some(car => car.name === input.value);
             if (!carExists && input.value) {
@@ -307,8 +271,15 @@ function generateEmail() {
         }
     });
 
-    // Exit if validation failed
-    if (document.querySelector('#fields input:invalid')) return;
+    if (missingFields.length > 0) {
+        alert(`Please fill in all fields: ${missingFields.join(', ')}`);
+        return;
+    }
+
+    if (document.querySelector('#fields input:invalid')) {
+        alert('Please correct invalid inputs.');
+        return;
+    }
 
     // Handle date-related placeholders
     const dateFields = ['date', 'date1', 'date2', 'dateSPA', 'dateNUR'];
@@ -363,10 +334,10 @@ Finally, deposits are required for the following: ${depositList}. I will send yo
         }
     }
 
-    // Prepare replacement map for placeholders
+    // Prepare replacement map
     let replacements = {};
 
-    placeholders.forEach(placeholder => {
+    uniquePlaceholders.forEach(placeholder => {
         if (placeholder === 'day' && dateValues['date']) {
             replacements['day'] = dateValues['date'].day;
         } else if (placeholder === 'month' && dateValues['date']) {
@@ -435,7 +406,15 @@ Finally, deposits are required for the following: ${depositList}. I will send yo
         }
     });
 
-    // Perform replacements for all placeholders
+    // Ensure all placeholders have values
+    const computedPlaceholders = ['arrivalTime', 'depositSection', 'day', 'month', 'year', 'Day1', 'Month1', 'Year1', 'day2', 'month2', 'year2', 'daySPA', 'monthSPA', 'yearSPA', 'dayNUR', 'monthNUR', 'yearNUR', 'originalexcess', 'insuranceexcess', 'insuranceprice'];
+    const missingPlaceholders = uniquePlaceholders.filter(p => !computedPlaceholders.includes(p) && (!replacements[p] || replacements[p].trim() === ''));
+    if (missingPlaceholders.length > 0) {
+        alert(`The following placeholders are missing values: ${missingPlaceholders.join(', ')}`);
+        return;
+    }
+
+    // Replace placeholders in email body
     Object.keys(replacements).forEach(placeholder => {
         const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
         body = body.replace(regex, replacements[placeholder]);
@@ -443,6 +422,79 @@ Finally, deposits are required for the following: ${depositList}. I will send yo
 
     document.getElementById('subject').value = subject;
     document.getElementById('body').value = body;
+
+    // Handle Excel Information
+    const excelInfoSection = document.getElementById('excelInfoSection');
+    let excelData = { names: [], values: [] };
+
+    if (template.excelInfo && Array.isArray(template.excelInfo) && template.excelInfo.length > 0) {
+        excelInfoSection.classList.remove('hidden');
+        template.excelInfo.forEach(col => {
+            if (!col || typeof col !== 'object' || !col.column || col.value === undefined) return;
+            let columnName = col.column;
+            let columnValue = col.value;
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                columnName = columnName.replace(regex, replacements[placeholder] || '');
+                columnValue = columnValue.replace(regex, replacements[placeholder] || '');
+            });
+            excelData.names.push(columnName);
+            // Normalize blank values to empty string
+            excelData.values.push(columnValue.trim() === '' ? '' : columnValue);
+        });
+    } else {
+        excelInfoSection.classList.add('hidden');
+    }
+
+    window.currentExcelData = excelData;
+
+    // Handle Steps
+    const stepsSection = document.getElementById('stepsSection');
+    const stepsList = document.getElementById('stepsList');
+    stepsList.innerHTML = '';
+    template.steps = Array.isArray(template.steps) ? template.steps : [];
+
+    if (template.steps.length > 0) {
+        stepsSection.classList.remove('hidden');
+        let stepsHTML = '<ol>';
+        template.steps.forEach(step => {
+            if (!step || typeof step !== 'object' || !step.description) return;
+            let description = step.description;
+            Object.keys(replacements).forEach(placeholder => {
+                const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+                description = description.replace(regex, replacements[placeholder] || '');
+            });
+            let stepName = step.name && typeof step.name === 'string' ? step.name : 'Step';
+            stepsHTML += `
+                <li>
+                    <strong>${stepName}</strong>
+                    <p>${description}</p>
+                </li>
+            `;
+        });
+        stepsHTML += '</ol>';
+        stepsList.innerHTML = stepsHTML;
+        if (stepsList.innerHTML === '<ol></ol>') {
+            stepsSection.classList.add('hidden');
+        }
+    } else {
+        stepsSection.classList.add('hidden');
+    }
+}
+
+function copyExcelInfo() {
+    const data = window.currentExcelData;
+    if (!data || !data.values.length) {
+        alert('No Excel data available to copy.');
+        return;
+    }
+    const text = data.values.join('\t');
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Excel values copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy Excel data:', err);
+        alert('Failed to copy Excel data.');
+    });
 }
 
 function copyToClipboard() {
@@ -552,7 +604,7 @@ function toggleDeposit(index) {
     const depositInput = document.getElementById(`carDeposit-${index}`);
     if (checkbox && depositInput) depositInput.disabled = !checkbox.checked;
 }
-
+  
 function addItem(listType) {
     const name = document.getElementById('newItemName').value.trim();
     if (!name) return;
@@ -632,7 +684,7 @@ async function saveList() {
         alert(`Error saving ${listType} list: ${error.message}`);
     }
 }
-
+  
 function extractPlaceholders(template) {
     const regex = /\{([^{}]+)\}/g;
     const matches = [];
@@ -642,7 +694,7 @@ function extractPlaceholders(template) {
     }
     return [...new Set(matches)]; // Remove duplicates
 }
-
+  
 // Edit Templates Functions
 function loadEditTemplatesDropdown() {
     const select = document.getElementById('templateSelect');
@@ -655,8 +707,43 @@ function loadEditTemplatesDropdown() {
 function loadTemplateToEdit() {
     const select = document.getElementById('templateSelect');
     const textarea = document.getElementById('templateBody');
-    textarea.value = templates[select.value] || '';
+    const excelColumnsList = document.getElementById('excelColumnsList');
+    const stepsEditList = document.getElementById('stepsEditList');
+    const template = templates[select.value] || {};
+
+    textarea.value = typeof template === 'string' ? template : template.body || '';
+    
+    // Load Excel Columns
+    excelColumnsList.innerHTML = '';
+    const excelInfo = template.excelInfo || [];
+    excelInfo.forEach((col, index) => {
+        excelColumnsList.innerHTML += `
+            <div class="list-item">
+                <label>Column Name:</label>
+                <input type="text" value="${col.column}" id="excelColumn-${index}">
+                <label>Default Value:</label>
+                <input type="text" value="${col.value || ''}" id="excelValue-${index}">
+                <button onclick="removeExcelColumn(${index})">Remove</button>
+            </div>
+        `;
+    });
+
+    // Load Steps
+    stepsEditList.innerHTML = '';
+    const steps = template.steps || [];
+    steps.forEach((step, index) => {
+        stepsEditList.innerHTML += `
+            <div class="list-item">
+                <label>Step Name:</label>
+                <input type="text" value="${step.name}" id="stepName-${index}">
+                <label>Description:</label>
+                <textarea id="stepDesc-${index}">${step.description}</textarea>
+                <button onclick="removeStep(${index})">Remove</button>
+            </div>
+        `;
+    });
 }
+  
 
 function renameTemplate() {
     const select = document.getElementById('templateSelect');
@@ -669,13 +756,8 @@ function renameTemplate() {
     
     const newName = prompt('Enter new template name:', currentName);
     if (newName && newName !== currentName && !templates[newName]) {
-        // Store the template content
-        const templateContent = templates[currentName];
-        // Delete the old template
+        templates[newName] = templates[currentName];
         delete templates[currentName];
-        // Add the template with the new name
-        templates[newName] = templateContent;
-        // Save to Firebase
         saveAllData().then(() => {
             loadEditTemplatesDropdown();
             document.getElementById('templateSelect').value = newName;
@@ -683,17 +765,67 @@ function renameTemplate() {
             alert('Template renamed successfully!');
         });
     } else if (newName === currentName) {
-        // Do nothing if the name hasn't changed
         return;
     } else if (templates[newName]) {
         alert('Template name already exists!');
     }
 }
 
+function addExcelColumn() {
+    const select = document.getElementById('templateSelect');
+    if (!select.value) {
+        alert('Please select a template first.');
+        return;
+    }
+    const columnName = prompt('Enter Excel column name:');
+    if (columnName) {
+        const columnValue = prompt('Enter default value for this column (optional):') || '';
+        const template = templates[select.value];
+        template.excelInfo = template.excelInfo || [];
+        template.excelInfo.push({ column: columnName, value: columnValue });
+        loadTemplateToEdit();
+    }
+}
+
+function removeExcelColumn(index) {
+    const select = document.getElementById('templateSelect');
+    if (select.value) {
+        templates[select.value].excelInfo.splice(index, 1);
+        loadTemplateToEdit();
+    }
+}
+
+function addStep() {
+    const select = document.getElementById('templateSelect');
+    if (!select.value) {
+        alert('Please select a template first.');
+        return;
+    }
+    const stepName = prompt('Enter step name:');
+    if (stepName) {
+        const template = templates[select.value];
+        template.steps = template.steps || [];
+        template.steps.push({ name: stepName, description: '' });
+        loadTemplateToEdit();
+    }
+}
+
+function removeStep(index) {
+    const select = document.getElementById('templateSelect');
+    if (select.value) {
+        templates[select.value].steps.splice(index, 1);
+        loadTemplateToEdit();
+    }
+}
+  
 function addTemplate() {
     const name = prompt('Enter new template name:');
     if (name && !templates[name]) {
-        templates[name] = '';
+        templates[name] = {
+            body: '',
+            excelInfo: [],
+            steps: []
+        };
         loadEditTemplatesDropdown();
         document.getElementById('templateSelect').value = name;
         loadTemplateToEdit();
@@ -701,12 +833,32 @@ function addTemplate() {
         alert('Template name already exists!');
     }
 }
-
+  
 function saveTemplate() {
     const select = document.getElementById('templateSelect');
     const textarea = document.getElementById('templateBody');
+    const excelColumnsList = document.getElementById('excelColumnsList');
+    const stepsEditList = document.getElementById('stepsEditList');
+    
     if (select.value) {
-        templates[select.value] = textarea.value;
+        const template = templates[select.value] || {};
+        
+        // Save body
+        template.body = textarea.value;
+        
+        // Save Excel columns
+        template.excelInfo = Array.from(excelColumnsList.querySelectorAll('.list-item')).map((_, index) => ({
+            column: document.getElementById(`excelColumn-${index}`).value,
+            value: document.getElementById(`excelValue-${index}`).value
+        }));
+        
+        // Save steps
+        template.steps = Array.from(stepsEditList.querySelectorAll('.list-item')).map((_, index) => ({
+            name: document.getElementById(`stepName-${index}`).value,
+            description: document.getElementById(`stepDesc-${index}`).value
+        }));
+        
+        templates[select.value] = template;
         saveAllData().then(() => alert('Template saved!'));
     }
 }
@@ -715,7 +867,10 @@ function deleteTemplate() {
     const select = document.getElementById('templateSelect');
     if (select.value && confirm(`Delete ${select.value}?`)) {
         delete templates[select.value];
-        loadEditTemplatesDropdown();
+        saveAllData().then(() => {
+            loadEditTemplatesDropdown();
+            document.getElementById('templateBody').value = '';
+        });
     }
 }
 
@@ -727,6 +882,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load dropdowns if needed
     if (currentScreen === 'templates') {
         loadTemplateDropdown();
+        showFields();
     }
     if (currentScreen === 'editTemplates') {
         loadEditTemplatesDropdown();
