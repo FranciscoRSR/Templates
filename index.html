@@ -61,6 +61,16 @@
                 <label for="body">Body:</label>
                 <textarea id="body" readonly></textarea>
                 <button onclick="copyToClipboard()">Copy to Clipboard</button>
+                <!-- New Excel Information Section -->
+                <div id="excelInfoSection" class="hidden">
+                    <h3>Excel Information</h3>
+                    <button onclick="copyExcelInfo()">Copy Excel Data</button>
+                </div>
+                <!-- New Steps Section -->
+                <div id="stepsSection" class="hidden">
+                    <h3>Steps Modifications</h3>
+                    <div id="stepsList"></div>
+                </div>
             </div>
         </div>
 
@@ -80,7 +90,20 @@
             <div class="form-section">
                 <label for="templateSelect">Select Template:</label>
                 <select id="templateSelect" onchange="loadTemplateToEdit()"></select>
+                <label for="templateBody">Template Body:</label>
                 <textarea id="templateBody" rows="10"></textarea>
+                <!-- Excel Columns Section -->
+                <h3>Excel Columns</h3>
+                <div id="excelColumnsList"></div>
+                <div class="button-group">
+                    <button onclick="addExcelColumn()">Add Excel Column</button>
+                </div>
+                <!-- Steps Section -->
+                <h3>Steps Modifications</h3>
+                <div id="stepsEditList"></div>
+                <div class="button-group">
+                    <button onclick="addStep()">Add Step</button>
+                </div>
                 <div class="button-group">
                     <button onclick="addTemplate()">Add New Template</button>
                     <button onclick="renameTemplate()">Rename Template</button>
@@ -91,5 +114,4 @@
         </div>
     </div>
     <script src="script.js"></script>
-</body>
 </html>
