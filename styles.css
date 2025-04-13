@@ -1,58 +1,134 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #e74c3c; /* Light red color */
+    --primary-hover: #c0392b; /* Darker red for hover states */
+    --secondary-color: #555;
+    --secondary-hover: #777;
+    --light-gray: #f4f4f4;
+    --white: #FFFFFF;
+    --border-color: #ddd;
+    --text-color: #333;
+    --shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    background-color: var(--light-gray);
+    color: var(--text-color);
     margin: 0;
     display: flex;
     min-height: 100vh;
+    line-height: 1.6;
+    padding-top: 70px; /* Added padding to prevent content from being hidden under header */
 }
 
+/* Header */
+.header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background-color: var(--primary-color);
+    padding: 15px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    transition: var(--transition);
+    color: var(--white);
+    height: 70px; /* Fixed height to ensure consistent spacing */
+}
+
+.header h1 {
+    margin: 0;
+    color: var(--white);
+    font-size: 24px;
+}
+
+.header-logo {
+    height: 40px;
+    margin-right: 15px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+}
+
+/* Sidebar */
 #sidebar {
     display: flex;
-    flex-direction: column; /* Stack buttons vertically */
-    width: 170px; /* Adjust width to fit a single button's width plus padding */
-    padding: 10px;
-    background-color: #f4f4f4;
-    align-items: center; /* Center buttons horizontally within the sidebar */
-    justify-content: flex-start; /* Align items from the top */
+    flex-direction: column;
+    width: 170px;
+    padding: 15px 10px;
+    background-color: var(--white);
+    align-items: center;
+    justify-content: flex-start;
     height: auto;
-    min-height: 100vh; /* Optional: Extend sidebar to full viewport height */
+    min-height: calc(100vh - 70px); /* Adjust for header height */
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: var(--transition);
+    z-index: 100;
 }
 
 #sidebar button {
     width: 150px;
-    padding: 8px;
-    background-color: #007BFF; /* Blue color to match the image */
-    color: white;
+    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     text-align: center;
-    margin: 5px 0; /* Vertical spacing between buttons */
+    margin: 5px 0;
+    transition: var(--transition);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #sidebar button:hover {
-    background-color: #0056b3; /* Darker blue on hover, matching the default button hover */
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#sidebar button:active {
+    transform: translateY(0);
 }
 
 #initialListOptions, #sidebarListOptions {
     margin-left: 0;
     display: flex;
-    flex-direction: column; /* Submenu stays vertical */
+    flex-direction: column;
     align-items: center;
     width: 100%;
 }
 
 #initialListOptions button, #sidebarListOptions button {
-    background-color: #555; /* Already grey */
-    color: white;
+    background-color: var(--secondary-color);
+    color: var(--white);
     width: 150px;
 }
 
 #initialListOptions button:hover, #sidebarListOptions button:hover {
-    background-color: #777; /* Already matching hover */
+    background-color: var(--secondary-hover);
 }
 
+/* Logo in sidebar */
+.sidebar-logo {
+    width: 140px;
+    margin-bottom: 15px;
+    display: block;
+}
+
+/* Main Content */
 .main-content {
     flex-grow: 1;
     padding: 20px;
@@ -65,21 +141,51 @@ body {
 }
 
 .screen {
-    background: white;
-    padding: 20px;
+    background: var(--white);
+    padding: 25px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .hidden {
     display: none !important;
 }
 
+/* Typography */
 h1, h2, h3 {
-    text-align: center;
-    color: #333;
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-weight: 600;
 }
 
+h1 {
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+h1::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background-color: var(--primary-color);
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 2px;
+}
+
+/* Buttons */
 .button-container {
     display: flex;
     flex-direction: column;
@@ -89,37 +195,59 @@ h1, h2, h3 {
 }
 
 button {
-    background-color: #007BFF;
-    color: white;
-    padding: 10px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 10px 15px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
+    font-size: 14px;
     margin: 5px;
+    transition: var(--transition);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-weight: 500;
 }
 
 button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 button:hover:not(:disabled) {
-    background-color: #0056b3;
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Forms */
 label {
     display: block;
     margin: 10px 0 5px;
-    font-weight: bold;
+    font-weight: 500;
+    color: var(--text-color);
 }
 
 select, input, textarea {
     width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
     box-sizing: border-box;
+    font-size: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2); /* Updated to match the new red color */
 }
 
 textarea {
@@ -135,16 +263,172 @@ textarea {
     background-color: #f9f9f9;
 }
 
+/* List Items */
 #listItems {
     max-height: 300px;
     overflow-y: auto;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 5px;
 }
 
 .list-item {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 5px;
-    border-bottom: 1px solid #ddd;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+    gap: 10px;
+}
+
+.list-item:hover {
+    background-color: #f0f0f0;
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item label {
+    flex: 0 0 auto;
+    margin-right: 5px;
+    font-weight: 500;
+}
+
+.list-item input[type="text"],
+.list-item input[type="number"],
+.list-item input[type="email"] {
+    flex: 1 1 100px;
+    max-width: 150px;
+}
+
+.list-item input[type="checkbox"] {
+    margin: 0 10px;
+}
+
+.list-item button {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/* Animation effects */
+@keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+        padding-top: 70px; /* Ensure consistent spacing on mobile */
+    }
+    
+    #sidebar {
+        width: 100%;
+        min-height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 10px;
+    }
+    
+    .sidebar-logo {
+        width: 120px;
+        margin: 0 auto 10px;
+    }
+    
+    #sidebar button {
+        width: auto;
+        margin: 5px;
+    }
+    
+    .main-content {
+        padding: 15px;
+    }
+    
+    .screen {
+        padding: 15px;
+    }
+    
+    h1 {
+        font-size: 24px;
+    }
+    
+    button {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .list-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .list-item label {
+        margin-bottom: 5px;
+    }
+
+    .list-item input[type="text"],
+    .list-item input[type="number"],
+    .list-item input[type="email"] {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .list-item button {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+
+/* For smaller screens */
+@media (max-width: 480px) {
+    .button-container {
+        width: 100%;
+    }
+    
+    button {
+        width: 100%;
+    }
+    
+    h1 {
+        font-size: 20px;
+    }
+    
+    .screen {
+        padding: 12px;
+    }
+    
+    .header-logo {
+        height: 30px;
+    }
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+input[list] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+input[list]:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+}
+
+datalist {
+    display: none; /* Ensure datalist doesn't affect layout */
 }
