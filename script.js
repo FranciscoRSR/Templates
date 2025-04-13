@@ -1,64 +1,70 @@
-// Predefined lists
-let cars = [
-    { name: "BMW M240i", requiresDeposit: false, depositAmount: 0 },
-    { name: "VW Golf R", requiresDeposit: false, depositAmount: 0 },
-    { name: "Porsche GT3", requiresDeposit: true, depositAmount: 10000 },
-    { name: "Nissan GT-R", requiresDeposit: false, depositAmount: 0 },
-    { name: "Hyundai i30N", requiresDeposit: false, depositAmount: 0 },
-    { name: "Porsche GT3 RS", requiresDeposit: true, depositAmount: 15000 }
-];
-let taxis = ["Audi e-tron", "BMW M5", "Porsche GT3 RS"];
-let hotels = [
-    { name: "Tiergarten Hotel", email: "info@tiergartenhotel.com" },
-    { name: "Blaue Ecke", email: "reservations@blaueecke.com" }
-];
-let packages = ["Allinc Package", "Track Self Drive", "Taxi Lap"];
-
-let templates = {
-    PremiumTrackDays: `Hello {name},
-
-Unfortunately, we don’t have the schedule for TF on Nürburgring 2023 yet but, we already have some dates for our Premium Track Days on SPA!
-
-On our Premium Track Days we rent all the track only for us, and you can go on your own car paying only the entry or rent one of our car fleet https://rsrbooking.com/cars (WE ALREADY HAVE THE PORSCHE GT3 RS 992).
-
-If you are interested in this, please tell me on which date, and I'll help you with the perfect package for you!
-
-Any questions, just let me know.`,
-    BookingConfirmationDeposit: `Hi {name},
-
-As I mentioned previously, we require a deposit of €{deposit} for your booking of the {car} for {laps} {package} on the next {day} of {month} {year}. Here is a LINK https://www.saferpay.com/SecurePayGate/Payment/651824/17726469/df189ddc-2190-4ba5-9b48-2ab40d4842e1 for you to make the deposit. This payment will not be processed, and we will cancel it once the car is returned.`,
-    BookingConfirmationFull: `Hello {name},
-
-Thank you for booking with RSR! I’m happy to confirm that everything is available and booked:
-
-{day}/{month}/{year} {time}
-{car} - {laps} {package}
-
-We are expecting you at our office at {arrivalTime} at latest to finalise the paperwork and for the drivers briefing.
-
-RSRNurburg,
-Antoniusweg 1a
-53520 Nurburg
-Germany
-
-I will be your contact person, so if you have any questions feel free to contact me and I will help you.
-{depositSection}`,
-    TaxiLapOffer: `Hello {name},
-
-My name is Francisco, I'll be your contact with RSR.
-
-Regarding your question, I can offer you a taxi lap in the {taxi} on the {day} of {month} {year} from {firstTime} to {lastTime}. If that sounds good to you, please confirm the time, and here is the payment link https://www.saferpay.com/SecurePayGate/Payment/651824/17726469/58cd919f-995a-4a00-aa9a-e50880d1602b to make the booking.
-
-If you have any doubts, feel free to let me know.`,
-    HotelRecommendation: `Hello dear {hotel} team,
-
-Our customer {name} is looking for a room for the {day} of {month} {year}. We will be very happy if you can help him.
-
-I let you deal with this yourselves.`
+// Firebase configuration and initialization
+const firebaseConfig = {
+  apiKey: "AIzaSyAC_Xt-Nyz4_jfzEBbqUZfCLf__-wnXaLQ",
+  authDomain: "rsr-templates.firebaseapp.com",
+  projectId: "rsr-templates",
+  storageBucket: "rsr-templates.appspot.com",
+  messagingSenderId: "234762099768",
+  appId: "1:234762099768:web:fdef26741b469db1089acd"
 };
 
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Global variables (declare them only once)
+let cars = [];
+let taxis = [];
+let hotels = [];
+let packages = [];
+let templates = {};
 let currentScreen = 'initial';
 let isSidebarListVisible = false;
+
+// Load data from Firebase
+async function loadData() {
+    try {
+      console.log("Attempting to load data from Firestore...");
+      const doc = await db.collection('appData').doc('currentData').get();
+      console.log("Document exists:", doc.exists);
+      if (doc.exists) {
+        const data = doc.data();
+        console.log("Loaded data:", data);
+        cars = data.cars || [];
+        taxis = data.taxis || [];
+        hotels = data.hotels || [];
+        packages = data.packages || [];
+        templates = data.templates || {};
+      } else {
+        console.log("No document found, saving default data...");
+        await saveAllData();
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      cars = defaultData.cars;
+      taxis = defaultData.taxis;
+      hotels = defaultData.hotels;
+      packages = defaultData.packages;
+      templates = defaultData.templates;
+    }
+}
+
+// Save all data to Firebase
+async function saveAllData() {
+    try {
+      await db.collection('appData').doc('currentData').set({
+        cars,
+        taxis,
+        hotels,
+        packages,
+        templates
+      });
+      console.log("Data saved successfully");
+    } catch (error) {
+      console.error("Error saving data:", error);
+      alert("Error saving data to database");
+    }
+}
 
 function showScreen(screenId) {
     const screens = ['initialScreen', 'templatesScreen', 'editListScreen', 'editTemplatesScreen'];
@@ -84,8 +90,12 @@ function showScreen(screenId) {
     currentScreen = screenId;
 
     // Load dropdowns when switching screens
-    if (screenId === 'templates') loadTemplateDropdown();
-    if (screenId === 'editTemplates') loadEditTemplatesDropdown();
+    if (screenId === 'templates') {
+        loadTemplateDropdown(); // Ensure this is called
+    }
+    if (screenId === 'editTemplates') {
+        loadEditTemplatesDropdown();
+    }
 }
 
 function toggleInitialEditList() {
@@ -101,8 +111,10 @@ function toggleEditList() {
 
 function loadTemplateDropdown() {
     const select = document.getElementById('emailType');
+    // Ensure templates are sorted alphabetically
+    const sortedTemplates = Object.keys(templates).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     select.innerHTML = '<option value="">-- Select a Template --</option>' + 
-        Object.keys(templates).map(key => `<option value="${key}">${key}</option>`).join('');
+        sortedTemplates.map(key => `<option value="${key}">${key}</option>`).join('');
 }
 
 function showFields() {
@@ -113,60 +125,158 @@ function showFields() {
 
     if (!emailType) return;
 
-    let fields = '<label for="name">Name:</label><input type="text" id="name">';
+    const template = templates[emailType];
+    const placeholders = extractPlaceholders(template);
+
+    let fields = '';
+    
+    // Handle existing templates for backward compatibility
     switch (emailType) {
-        case 'PremiumTrackDays':
-            break;
-        case 'BookingConfirmationDeposit':
-            fields += `
-                <label for="car">Car:</label>
-                <select id="car">${cars.map(car => `<option value="${car.name}">${car.name}</option>`).join('')}</select>
-                <label for="date">Date:</label>
-                <input type="date" id="date">
-                <label for="laps">Laps (e.g., 6 laps):</label>
-                <input type="text" id="laps">
-                <label for="package">Package:</label>
-                <select id="package">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
-            `;
-            break;
-        case 'BookingConfirmationFull':
-            fields += `
-                <label for="car">Car:</label>
-                <select id="car">${cars.map(car => `<option value="${car.name}">${car.name}</option>`).join('')}</select>
-                <label for="date">Date:</label>
-                <input type="date" id="date">
-                <label for="laps">Laps (e.g., 4 laps):</label>
-                <input type="text" id="laps">
-                <label for="time">Time (e.g., 08:00):</label>
-                <input type="text" id="time">
-                <label for="package">Package:</label>
-                <select id="package">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
-            `;
-            break;
-        case 'TaxiLapOffer':
-            fields += `
-                <label for="taxi">Taxi:</label>
-                <select id="taxi">${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}</select>
-                <label for="date">Date:</label>
-                <input type="date" id="date">
-                <label for="firstTime">First Time (e.g., 08:00):</label>
-                <input type="text" id="firstTime">
-                <label for="lastTime">Last Time (e.g., 19:00):</label>
-                <input type="text" id="lastTime">
-            `;
-            break;
-        case 'HotelRecommendation':
-            fields += `
-                <label for="hotel">Hotel:</label>
-                <select id="hotel" onchange="autoFillHotelEmail()">${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}</select>
-                <label for="hotelEmail">Hotel Email:</label>
-                <input type="email" id="hotelEmail" readonly>
-                <label for="date">Date:</label>
-                <input type="date" id="date">
-            `;
+        default:
+            // Dynamic fields for new templates
+            const hasDate1 = placeholders.includes('Date1') || placeholders.includes('Day1') || placeholders.includes('Month1') || placeholders.includes('Year1');
+            const hasDate2 = placeholders.includes('Date2') || placeholders.includes('Day2') || placeholders.includes('Month2') || placeholders.includes('Year2');
+            const hasDateNUR = placeholders.includes('dateNUR') || placeholders.includes('dayNUR') || placeholders.includes('monthNUR') || placeholders.includes('yearNUR');
+            const hasDateSPA = placeholders.includes('dateSPA') || placeholders.includes('daySPA') || placeholders.includes('monthSPA') || placeholders.includes('yearSPA');
+            const hasSingleDate = placeholders.includes('date') || placeholders.includes('day') || placeholders.includes('month') || placeholders.includes('year');
+
+            placeholders.forEach(placeholder => {
+                const id = placeholder;
+                const label = placeholder.charAt(0).toUpperCase() + placeholder.slice(1);
+                if (placeholder === 'car') {
+                    fields += `
+                        <label for="${id}">Car:</label>
+                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                        <datalist id="${id}-list">
+                            ${cars.map(car => `<option value="${car.name}">`).join('')}
+                        </datalist>
+                    `;
+                } else if (placeholder === 'car1') {
+                    fields += `
+                        <label for="${id}">Car 1:</label>
+                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                        <datalist id="${id}-list">
+                            ${cars.map(car => `<option value="${car.name}">`).join('')}
+                        </datalist>
+                    `;
+                } else if (placeholder === 'car2') {
+                    fields += `
+                        <label for="${id}">Car 2:</label>
+                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                        <datalist id="${id}-list">
+                            ${cars.map(car => `<option value="${car.name}">`).join('')}
+                        </datalist>
+                    `;
+                } else if (placeholder === 'carSPA') {
+                    fields += `
+                        <label for="${id}">Car Spa:</label>
+                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                        <datalist id="${id}-list">
+                            ${cars.map(car => `<option value="${car.name}">`).join('')}
+                        </datalist>
+                    `;
+                } else if (placeholder === 'carNUR') {
+                    fields += `
+                        <label for="${id}">Car Nur:</label>
+                        <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
+                        <datalist id="${id}-list">
+                            ${cars.map(car => `<option value="${car.name}">`).join('')}
+                        </datalist>
+                    `;
+                } else if (placeholder === 'taxi') {
+                    fields += `
+                        <label for="${id}">Taxi:</label>
+                        <select id="${id}">${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}</select>
+                    `;
+                } else if (placeholder === 'hotel') {
+                    fields += `
+                        <label for="${id}">Hotel:</label>
+                        <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}</select>
+                        <label for="${id}Email">Hotel Email:</label>
+                        <input type="email" id="${id}Email" readonly>
+                    `;
+                } else if (placeholder === 'package') {
+                    fields += `
+                        <label for="${id}">Package:</label>
+                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
+                    `;
+                } else if (placeholder === 'packageSPA') {
+                    fields += `
+                        <label for="${id}">Package Spa:</label>
+                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
+                    `;
+                } else if (placeholder === 'packageNUR') {
+                    fields += `
+                        <label for="${id}">Package Nur:</label>
+                        <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
+                    `;
+                } else if (hasDate1 && (placeholder === 'Date1' || placeholder === 'Day1' || placeholder === 'Month1' || placeholder === 'Year1')) {
+                    if (!fields.includes('id="date1"')) {
+                        fields += `
+                            <label for="date1">Date 1:</label>
+                            <input type="date" id="date1">
+                        `;
+                    }
+                } else if (hasDate2 && (placeholder === 'Date2' || placeholder === 'Day2' || placeholder === 'Month2' || placeholder === 'Year2')) {
+                    if (!fields.includes('id="date2"')) {
+                        fields += `
+                            <label for="date2">Date 2:</label>
+                            <input type="date" id="date2">
+                        `;
+                    }
+                } else if (hasDateSPA && (placeholder === 'dateSPA' || placeholder === 'daySPA' || placeholder === 'monthSPA' || placeholder === 'yearSPA')) {
+                    if (!fields.includes('id="dateSPA"')) {
+                        fields += `
+                            <label for="dateSPA">Date Spa:</label>
+                            <input type="date" id="dateSPA">
+                        `;
+                    }
+                } else if (hasDateNUR && (placeholder === 'dateNUR' || placeholder === 'dayNUR' || placeholder === 'monthNUR' || placeholder === 'yearNUR')) {
+                    if (!fields.includes('id="dateNUR"')) {
+                        fields += `
+                            <label for="dateNUR">Date Nur:</label>
+                            <input type="date" id="dateNUR">
+                        `;
+                    }
+                } else if (hasSingleDate && (placeholder === 'date' || placeholder === 'day' || placeholder === 'month' || placeholder === 'year') && !hasDate1 && !hasDate2) {
+                    if (!fields.includes('id="date"')) {
+                        fields += `
+                            <label for="date">Date:</label>
+                            <input type="date" id="date">
+                        `;
+                    }
+                } else if (placeholder.includes('time') && placeholder !== 'arrivalTime' && placeholder !== 'firstTime' && placeholder !== 'lastTime') {
+                    fields += `
+                        <label for="${id}">${label} (e.g., 08:00):</label>
+                        <input type="text" id="${id}" placeholder="e.g., 08:00">
+                    `;
+                } else if (placeholder === 'firstTime' || placeholder === 'lastTime') {
+                    fields += `
+                        <label for="${id}">${label} (e.g., 08:00):</label>
+                        <input type="text" id="${id}" placeholder="e.g., 08:00">
+                    `;
+                } else if (placeholder === 'kms' || placeholder === 'Laps') {
+                    fields += `
+                        <label for="${id}">${label}:</label>
+                        <input type="number" id="${id}" min="0" step="1">
+                    `;
+                } else if (placeholder !== 'arrivalTime' && placeholder !== 'depositSection') {
+                    fields += `
+                        <label for="${id}">${label}:</label>
+                        <input type="text" id="${id}">
+                    `;
+                }
+            });
             break;
     }
     fieldsDiv.innerHTML = fields;
+}
+
+function autoFillHotelEmailDynamic(hotelId) {
+    const hotelSelect = document.getElementById(hotelId);
+    const hotelEmail = document.getElementById(`${hotelId}Email`);
+    const selectedHotel = hotels.find(h => h.name === hotelSelect.value);
+    hotelEmail.value = selectedHotel ? selectedHotel.email : '';
 }
 
 function autoFillHotelEmail() {
@@ -178,83 +288,166 @@ function autoFillHotelEmail() {
 
 function generateEmail() {
     const emailType = document.getElementById('emailType').value;
-    let subject = '';
+    let subject = `RSRNurburg Email`;
     let body = templates[emailType] || '';
 
-    switch (emailType) {
-        case 'PremiumTrackDays': {
-            const name = document.getElementById('name').value;
-            subject = `RSRNurburg`;
-            body = body.replace('{name}', name);
-            break;
+    const placeholders = extractPlaceholders(body);
+    let values = {};
+
+    // Collect values from input fields
+    document.querySelectorAll('#fields input, #fields select').forEach(input => {
+        values[input.id] = input.value;
+        // Validate car fields
+        if (['car', 'car1', 'car2', 'carSPA', 'carNUR'].includes(input.id)) {
+            const carExists = cars.some(car => car.name === input.value);
+            if (!carExists && input.value) {
+                alert(`Invalid car name for ${input.id}: ${input.value}`);
+                return;
+            }
         }
-        case 'BookingConfirmationDeposit': {
-            const name = document.getElementById('name').value;
-            const car = document.getElementById('car').value;
-            const date = new Date(document.getElementById('date').value);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = date.toLocaleString('default', { month: 'long' });
-            const year = date.getFullYear();
-            const laps = document.getElementById('laps').value;
-            const pkg = document.getElementById('package').value;
-            const selectedCar = cars.find(c => c.name === car);
-            const deposit = selectedCar.requiresDeposit ? selectedCar.depositAmount : 0;
-            subject = `RSRNurburg Booking Confirmation`;
-            body = body.replace('{name}', name).replace('{car}', car).replace('{day}', day).replace('{month}', month).replace('{year}', year).replace('{laps}', laps).replace('{package}', pkg).replace('{deposit}', deposit);
-            if (!selectedCar.requiresDeposit) body = body.replace('As I mentioned previously, we require a deposit of €{deposit} for your booking of the {car} for {laps} {package} on the next {day} of {month} {year}. Here is a LINK https://www.saferpay.com/SecurePayGate/Payment/651824/17726469/df189ddc-2190-4ba5-9b48-2ab40d4842e1 for you to make the deposit. This payment will not be processed, and we will cancel it once the car is returned.', '');
-            break;
+    });
+
+    // Exit if validation failed
+    if (document.querySelector('#fields input:invalid')) return;
+
+    // Handle date-related placeholders
+    const dateFields = ['date', 'date1', 'date2', 'dateSPA', 'dateNUR'];
+    let dateValues = {};
+
+    dateFields.forEach(field => {
+        if (values[field]) {
+            const date = new Date(values[field]);
+            if (!isNaN(date)) {
+                dateValues[field] = {
+                    day: date.getDate().toString().padStart(2, '0'),
+                    month: date.toLocaleString('default', { month: 'long' }),
+                    year: date.getFullYear(),
+                    fullDate: `${date.getDate().toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+                };
+            }
         }
-        case 'BookingConfirmationFull': {
-            const name = document.getElementById('name').value;
-            const car = document.getElementById('car').value;
-            const date = new Date(document.getElementById('date').value);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = date.toLocaleString('default', { month: 'long' });
-            const year = date.getFullYear();
-            const laps = document.getElementById('laps').value;
-            const time = document.getElementById('time').value;
-            const arrivalTime = `${parseInt(time.split(':')[0]) - 1}:00`;
-            const pkg = document.getElementById('package').value;
-            const selectedCar = cars.find(c => c.name === car);
-            subject = `RSRNurburg Booking Confirmation`;
-            body = body.replace('{name}', name).replace('{car}', car).replace('{day}', day).replace('{month}', month).replace('{year}', year).replace('{laps}', laps).replace('{time}', time).replace('{arrivalTime}', arrivalTime).replace('{package}', pkg);
-            body = body.replace('{depositSection}', selectedCar.requiresDeposit ? `\n\nDeposit: Finally, for this car you must make a deposit of €${selectedCar.depositAmount}. So I send you the payment link to do that deposit. This is a payment that we are not going to take and when the car is back we cancel it.` : '');
-            break;
+    });
+
+    // Handle arrivalTime
+    let arrivalTime = '';
+    if (values['time']) {
+        const [hours, minutes] = values['time'].split(':').map(Number);
+        const adjustedHours = hours - 1;
+        arrivalTime = `${adjustedHours.toString().padStart(2, '0')}:${minutes ? minutes.toString().padStart(2, '0') : '00'}`;
+    }
+
+    // Handle depositSection
+    let depositSection = '';
+    const carFields = ['car', 'carNUR', 'carSPA', 'car1', 'car2'];
+    let depositCars = [];
+
+    carFields.forEach(field => {
+        if (values[field]) {
+            const selectedCar = cars.find(c => c.name === values[field]);
+            if (selectedCar && selectedCar.requiresDeposit) {
+                depositCars.push({ name: selectedCar.name, amount: selectedCar.depositAmount });
+            }
         }
-        case 'TaxiLapOffer': {
-            const name = document.getElementById('name').value;
-            const taxi = document.getElementById('taxi').value;
-            const date = new Date(document.getElementById('date').value);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = date.toLocaleString('default', { month: 'long' });
-            const year = date.getFullYear();
-            const firstTime = document.getElementById('firstTime').value;
-            const lastTime = document.getElementById('lastTime').value;
-            subject = `Taxi Lap ${taxi} - ${day} of ${month}`;
-            body = body.replace('{name}', name).replace('{taxi}', taxi).replace('{day}', day).replace('{month}', month).replace('{year}', year).replace('{firstTime}', firstTime).replace('{lastTime}', lastTime);
-            break;
-        }
-        case 'HotelRecommendation': {
-            const name = document.getElementById('name').value;
-            const hotel = document.getElementById('hotel').value;
-            const date = new Date(document.getElementById('date').value);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = date.toLocaleString('default', { month: 'long' });
-            const year = date.getFullYear();
-            subject = `RSR Nurburg Hotel recommendation`;
-            body = body.replace('{name}', name).replace('{hotel}', hotel).replace('{day}', day).replace('{month}', month).replace('{year}', year);
-            break;
+    });
+
+    if (depositCars.length > 0) {
+        if (depositCars.length === 1) {
+            depositSection = `
+Finally, for the ${depositCars[0].name}, a deposit of €${depositCars[0].amount} is required. I will send you the payment link one week before the event, or you can make the deposit directly at our office. This amount is not charged, and it will be canceled once the car is returned.
+            `;
+        } else {
+            const depositList = depositCars.map(car => `€${car.amount} for ${car.name}`).join(', ');
+            depositSection = `
+Finally, deposits are required for the following: ${depositList}. I will send you the payment links one week before the event, or you can make the deposits directly at our office. These amounts are not charged and will be canceled once the cars are returned.
+            `;
         }
     }
+
+    // Prepare replacement map for placeholders
+    let replacements = {};
+
+    placeholders.forEach(placeholder => {
+        if (placeholder === 'day' && dateValues['date']) {
+            replacements['day'] = dateValues['date'].day;
+        } else if (placeholder === 'month' && dateValues['date']) {
+            replacements['month'] = dateValues['date'].month;
+        } else if (placeholder === 'year' && dateValues['date']) {
+            replacements['year'] = dateValues['date'].year;
+        } else if (placeholder === 'date' && dateValues['date']) {
+            replacements['date'] = dateValues['date'].fullDate;
+        } else if (placeholder === 'Day1' && dateValues['date1']) {
+            replacements['Day1'] = dateValues['date1'].day;
+        } else if (placeholder === 'Month1' && dateValues['date1']) {
+            replacements['Month1'] = dateValues['date1'].month;
+        } else if (placeholder === 'Year1' && dateValues['date1']) {
+            replacements['Year1'] = dateValues['date1'].year;
+        } else if (placeholder === 'Date1' && dateValues['date1']) {
+            replacements['Date1'] = dateValues['date1'].fullDate;
+        } else if (placeholder === 'day2' && dateValues['date2']) {
+            replacements['day2'] = dateValues['date2'].day;
+        } else if (placeholder === 'month2' && dateValues['date2']) {
+            replacements['month2'] = dateValues['date2'].month;
+        } else if (placeholder === 'year2' && dateValues['date2']) {
+            replacements['year2'] = dateValues['date2'].year;
+        } else if (placeholder === 'Date2' && dateValues['date2']) {
+            replacements['Date2'] = dateValues['date2'].fullDate;
+        } else if (placeholder === 'daySPA' && dateValues['dateSPA']) {
+            replacements['daySPA'] = dateValues['dateSPA'].day;
+        } else if (placeholder === 'monthSPA' && dateValues['dateSPA']) {
+            replacements['monthSPA'] = dateValues['dateSPA'].month;
+        } else if (placeholder === 'yearSPA' && dateValues['dateSPA']) {
+            replacements['yearSPA'] = dateValues['dateSPA'].year;
+        } else if (placeholder === 'dateSPA' && dateValues['dateSPA']) {
+            replacements['dateSPA'] = dateValues['dateSPA'].fullDate;
+        } else if (placeholder === 'dayNUR' && dateValues['dateNUR']) {
+            replacements['dayNUR'] = dateValues['dateNUR'].day;
+        } else if (placeholder === 'monthNUR' && dateValues['dateNUR']) {
+            replacements['monthNUR'] = dateValues['dateNUR'].month;
+        } else if (placeholder === 'yearNUR' && dateValues['dateNUR']) {
+            replacements['yearNUR'] = dateValues['dateNUR'].year;
+        } else if (placeholder === 'dateNUR' && dateValues['dateNUR']) {
+            replacements['dateNUR'] = dateValues['dateNUR'].fullDate;
+        } else if (placeholder === 'arrivalTime') {
+            replacements['arrivalTime'] = arrivalTime;
+        } else if (placeholder === 'depositSection') {
+            replacements['depositSection'] = depositSection;
+        } else if (placeholder === 'originalexcess' || placeholder === 'insuranceexcess' || placeholder === 'insuranceprice') {
+            let selectedCar = null;
+            for (const field of ['car', 'car1', 'car2', 'carSPA', 'carNUR']) {
+                if (values[field]) {
+                    selectedCar = cars.find(c => c.name === values[field]);
+                    if (selectedCar) break;
+                }
+            }
+            if (selectedCar) {
+                if (placeholder === 'originalexcess') {
+                    replacements['originalexcess'] = selectedCar.originalExcess || '0';
+                } else if (placeholder === 'insuranceexcess') {
+                    replacements['insuranceexcess'] = selectedCar.insuranceExcess || '0';
+                } else if (placeholder === 'insuranceprice') {
+                    replacements['insuranceprice'] = selectedCar.raceIncPrice || '0';
+                }
+            } else {
+                replacements[placeholder] = '';
+            }
+        } else {
+            replacements[placeholder] = values[placeholder] || '';
+        }
+    });
+
+    // Perform replacements for all placeholders
+    Object.keys(replacements).forEach(placeholder => {
+        const regex = new RegExp(`\\{${placeholder}\\}`, 'g');
+        body = body.replace(regex, replacements[placeholder]);
+    });
 
     document.getElementById('subject').value = subject;
     document.getElementById('body').value = body;
 }
 
 function copyToClipboard() {
-    const subject = document.getElementById('subject').value;
     const body = document.getElementById('body').value;
-    navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`).then(() => alert('Email copied to clipboard!'));
+    navigator.clipboard.writeText(body).then(() => alert('Email body copied to clipboard!'));
 }
 
 // Edit List Functions
@@ -279,6 +472,12 @@ function showListEditor(listType) {
                 <input type="checkbox" id="requiresDeposit">
                 <label for="depositAmount">Deposit Amount:</label>
                 <input type="number" id="depositAmount" disabled>
+                <label for="originalExcess">Original Excess (€):</label>
+                <input type="number" id="originalExcess" min="0">
+                <label for="insuranceExcess">Insurance Excess (€):</label>
+                <input type="number" id="insuranceExcess" min="0">
+                <label for="raceIncPrice">RaceINC Price (€):</label>
+                <input type="number" id="raceIncPrice" min="0">
                 <button onclick="addItem('cars')">Add</button>
             `;
             document.getElementById('requiresDeposit').addEventListener('change', function() {
@@ -287,9 +486,18 @@ function showListEditor(listType) {
             list.forEach((item, index) => {
                 itemsDiv.innerHTML += `
                     <div class="list-item">
+                        <label>Name:</label>
                         <input type="text" value="${item.name}" id="carName-${index}">
-                        <label><input type="checkbox" ${item.requiresDeposit ? 'checked' : ''} onchange="toggleDeposit(${index})">Deposit</label>
+                        <label>Deposit:</label>
+                        <input type="checkbox" ${item.requiresDeposit ? 'checked' : ''} onchange="toggleDeposit(${index})">
+                        <label>Deposit Amount:</label>
                         <input type="number" value="${item.depositAmount}" id="carDeposit-${index}" ${item.requiresDeposit ? '' : 'disabled'}>
+                        <label>Original Excess:</label>
+                        <input type="number" value="${item.originalExcess || 0}" id="carOriginalExcess-${index}" min="0">
+                        <label>Insurance Excess:</label>
+                        <input type="number" value="${item.insuranceExcess || 0}" id="carInsuranceExcess-${index}" min="0">
+                        <label>RaceINC Price:</label>
+                        <input type="number" value="${item.raceIncPrice || 0}" id="carRaceIncPrice-${index}" min="0">
                         <button onclick="removeItem('cars', ${index})">Remove</button>
                     </div>
                 `;
@@ -353,7 +561,17 @@ function addItem(listType) {
         case 'cars':
             const requiresDeposit = document.getElementById('requiresDeposit').checked;
             const depositAmount = requiresDeposit ? parseInt(document.getElementById('depositAmount').value) || 0 : 0;
-            cars.push({ name, requiresDeposit, depositAmount });
+            const originalExcess = parseInt(document.getElementById('originalExcess').value) || 0;
+            const insuranceExcess = parseInt(document.getElementById('insuranceExcess').value) || 0;
+            const raceIncPrice = parseInt(document.getElementById('raceIncPrice').value) || 0;
+            cars.push({ 
+                name, 
+                requiresDeposit, 
+                depositAmount, 
+                originalExcess, 
+                insuranceExcess, 
+                raceIncPrice 
+            });
             break;
         case 'taxis':
             taxis.push(name);
@@ -367,7 +585,7 @@ function addItem(listType) {
             packages.push(name);
             break;
     }
-    showListEditor(listType);
+    saveAllData().then(() => showListEditor(listType));
 }
 
 function removeItem(listType, index) {
@@ -380,14 +598,17 @@ function removeItem(listType, index) {
     showListEditor(listType);
 }
 
-function saveList() {
+async function saveList() {
     const listType = document.getElementById('listTitle').textContent.split(' ')[1].toLowerCase();
     switch (listType) {
         case 'cars':
             cars = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => ({
                 name: document.getElementById(`carName-${index}`).value,
                 requiresDeposit: document.querySelector(`#listItems .list-item:nth-child(${index + 1}) input[type='checkbox']`).checked,
-                depositAmount: parseInt(document.getElementById(`carDeposit-${index}`).value) || 0
+                depositAmount: parseInt(document.getElementById(`carDeposit-${index}`).value) || 0,
+                originalExcess: parseInt(document.getElementById(`carOriginalExcess-${index}`).value) || 0,
+                insuranceExcess: parseInt(document.getElementById(`carInsuranceExcess-${index}`).value) || 0,
+                raceIncPrice: parseInt(document.getElementById(`carRaceIncPrice-${index}`).value) || 0
             }));
             break;
         case 'taxis':
@@ -403,14 +624,31 @@ function saveList() {
             packages = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => document.getElementById(`package-${index}`).value);
             break;
     }
-    alert(`${listType} list saved!`);
+    
+    try {
+        await saveAllData();
+        alert(`${listType} list saved!`);
+    } catch (error) {
+        alert(`Error saving ${listType} list: ${error.message}`);
+    }
+}
+
+function extractPlaceholders(template) {
+    const regex = /\{([^{}]+)\}/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(template)) !== null) {
+        matches.push(match[1]);
+    }
+    return [...new Set(matches)]; // Remove duplicates
 }
 
 // Edit Templates Functions
 function loadEditTemplatesDropdown() {
     const select = document.getElementById('templateSelect');
+    const sortedTemplates = Object.keys(templates).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     select.innerHTML = '<option value="">-- Select a Template --</option>' + 
-        Object.keys(templates).map(key => `<option value="${key}">${key}</option>`).join('');
+        sortedTemplates.map(key => `<option value="${key}">${key}</option>`).join('');
     loadTemplateToEdit();
 }
 
@@ -418,6 +656,38 @@ function loadTemplateToEdit() {
     const select = document.getElementById('templateSelect');
     const textarea = document.getElementById('templateBody');
     textarea.value = templates[select.value] || '';
+}
+
+function renameTemplate() {
+    const select = document.getElementById('templateSelect');
+    const currentName = select.value;
+    
+    if (!currentName) {
+        alert('Please select a template to rename.');
+        return;
+    }
+    
+    const newName = prompt('Enter new template name:', currentName);
+    if (newName && newName !== currentName && !templates[newName]) {
+        // Store the template content
+        const templateContent = templates[currentName];
+        // Delete the old template
+        delete templates[currentName];
+        // Add the template with the new name
+        templates[newName] = templateContent;
+        // Save to Firebase
+        saveAllData().then(() => {
+            loadEditTemplatesDropdown();
+            document.getElementById('templateSelect').value = newName;
+            loadTemplateToEdit();
+            alert('Template renamed successfully!');
+        });
+    } else if (newName === currentName) {
+        // Do nothing if the name hasn't changed
+        return;
+    } else if (templates[newName]) {
+        alert('Template name already exists!');
+    }
 }
 
 function addTemplate() {
@@ -437,7 +707,7 @@ function saveTemplate() {
     const textarea = document.getElementById('templateBody');
     if (select.value) {
         templates[select.value] = textarea.value;
-        alert('Template saved!');
+        saveAllData().then(() => alert('Template saved!'));
     }
 }
 
@@ -450,6 +720,15 @@ function deleteTemplate() {
 }
 
 // Initial setup
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadData();
     showScreen('initial');
+    
+    // Load dropdowns if needed
+    if (currentScreen === 'templates') {
+        loadTemplateDropdown();
+    }
+    if (currentScreen === 'editTemplates') {
+        loadEditTemplatesDropdown();
+    }
 });
