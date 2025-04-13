@@ -1,0 +1,150 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    display: flex;
+    min-height: 100vh;
+}
+
+#sidebar {
+    display: flex;
+    flex-direction: column; /* Stack buttons vertically */
+    width: 170px; /* Adjust width to fit a single button's width plus padding */
+    padding: 10px;
+    background-color: #f4f4f4;
+    align-items: center; /* Center buttons horizontally within the sidebar */
+    justify-content: flex-start; /* Align items from the top */
+    height: auto;
+    min-height: 100vh; /* Optional: Extend sidebar to full viewport height */
+}
+
+#sidebar button {
+    width: 150px;
+    padding: 8px;
+    background-color: #007BFF; /* Blue color to match the image */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    margin: 5px 0; /* Vertical spacing between buttons */
+}
+
+#sidebar button:hover {
+    background-color: #0056b3; /* Darker blue on hover, matching the default button hover */
+}
+
+#initialListOptions, #sidebarListOptions {
+    margin-left: 0;
+    display: flex;
+    flex-direction: column; /* Submenu stays vertical */
+    align-items: center;
+    width: 100%;
+}
+
+#initialListOptions button, #sidebarListOptions button {
+    background-color: #555; /* Already grey */
+    color: white;
+    width: 150px;
+}
+
+#initialListOptions button:hover, #sidebarListOptions button:hover {
+    background-color: #777; /* Already matching hover */
+}
+
+.main-content {
+    flex-grow: 1;
+    padding: 20px;
+    margin-left: 0;
+    transition: margin-left 0.3s;
+}
+
+.main-content.with-sidebar {
+    margin-left: 10px;
+}
+
+.screen {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.hidden {
+    display: none !important;
+}
+
+h1, h2, h3 {
+    text-align: center;
+    color: #333;
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    background-color: #007BFF;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+select, input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+textarea {
+    height: 200px;
+    resize: vertical;
+}
+
+.fields, .result {
+    margin-top: 20px;
+}
+
+#subject, #body {
+    background-color: #f9f9f9;
+}
+
+#listItems {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+}
