@@ -10,6 +10,24 @@ export function toggleTheme() {
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
 }
 
+const placeholderOrder = [
+    'name','surname', 'Customer Email','email' // Contact info first
+    'date', 'date1', 'date2', 'dateSPA', 'dateNUR', // Dates
+    'time', 'firstTime', 'lastTime', // Times
+    'car', 'car1', 'car2', 'carSPA', 'carNUR', // Cars
+    'kms', 'Laps', // Numeric fields
+    'Laps of instruction'
+    'package', 'packageSPA', 'packageNUR', // Packages
+    'Voucher Number',
+    'Voucher Package',
+    'Voucher Value',
+    'Booking Number',
+    'Staff Initials',
+    'taxi', // Taxi
+    'hotel', // Hotel
+    // Add other placeholders as needed
+];
+
 export function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.body.setAttribute('data-theme', savedTheme);
@@ -120,8 +138,9 @@ export function showFields() {
         }
     });
 
-    placeholders = [...new Set(placeholders)].sort();
+    placeholders = [...new Set(placeholders)];
 
+    // Map placeholders for date fields
     const datePlaceholderMap = {};
     ['day', 'month', 'year'].forEach(p => {
         if (placeholders.includes(p)) {
@@ -160,7 +179,21 @@ export function showFields() {
         }
     });
 
-    placeholders = [...new Set(placeholders)].sort();
+    placeholders = [...new Set(placeholders)];
+
+    // Sort placeholders based on custom order
+    const orderedPlaceholders = [];
+    placeholderOrder.forEach(placeholder => {
+        if (placeholders.includes(placeholder)) {
+            orderedPlaceholders.push(placeholder);
+        }
+    });
+    // Append any placeholders not in the custom order
+    placeholders.forEach(placeholder => {
+        if (!orderedPlaceholders.includes(placeholder)) {
+            orderedPlaceholders.push(placeholder);
+        }
+    });
 
     let fields = '';
     const cars = getCars();
@@ -168,7 +201,7 @@ export function showFields() {
     const hotels = getHotels();
     const packages = getPackages();
 
-    placeholders.forEach(placeholder => {
+    orderedPlaceholders.forEach(placeholder => {
         const id = placeholder;
         const label = placeholder.charAt(0).toUpperCase() + placeholder.slice(1);
         if (placeholder === 'car' || placeholder === 'car1' || placeholder === 'car2' || placeholder === 'carSPA' || placeholder === 'carNUR') {
