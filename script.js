@@ -3,6 +3,7 @@ import { loadData } from './dataManager.js';
 import { toggleTheme, loadTheme, toggleSidebar, showScreen, toggleInitialEditList, toggleEditList, showFields, autoFillHotelEmailDynamic, showListEditor, toggleDeposit, loadCategoryDropdown, loadTemplateDropdown, loadTemplateToEdit } from './uiRenderer.js';
 import { generateEmail, addItem, removeItem, saveList, addNewTemplate, renameExistingTemplate, addExcelColumn, removeExcelColumn, addStep, removeStep, saveTemplate, deleteExistingTemplate } from './templateManager.js';
 import { copyToClipboard, copyExcelInfo } from './utils.js';
+import { handleError } from './errorHandler.js';
 
 // Expose functions to global scope for HTML event handlers
 window.toggleTheme = toggleTheme;
@@ -37,10 +38,14 @@ window.filterTemplatesByCategory = () => {
 // Initial setup
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOMContentLoaded fired');
-    initializeFirebase();
-    loadTheme();
-    await loadData();
-    showScreen('initial');
+    try {
+        initializeFirebase();
+        loadTheme();
+        await loadData();
+        showScreen('initial');
+    } catch (error) {
+        handleError(error, 'Application initialization failed');
+    }
 
     // Attach event listeners
     document.getElementById('hamburgerBtn').addEventListener('click', toggleSidebar);
