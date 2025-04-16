@@ -1,3 +1,5 @@
+import { handleError } from './errorHandler.js';
+
 const firebaseConfig = {
     apiKey: "AIzaSyAC_Xt-Nyz4_jfzEBbqUZfCLf__-wnXaLQ",
     authDomain: "rsr-templates.firebaseapp.com",
@@ -10,13 +12,20 @@ const firebaseConfig = {
 let db;
 
 export function initializeFirebase() {
-    const app = firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
+    try {
+        const app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    } catch (error) {
+        handleError(error, 'Failed to initialize Firebase');
+    }
 }
 
 export async function loadDataFromFirebase() {
     try {
         console.log("Attempting to load data from Firestore...");
+        if (!navigator.onLine) {
+            throw new Error('No internet connection');
+        }
         const doc = await db.collection('appData').doc('currentData').get();
         console.log("Document exists:", doc.exists);
         if (doc.exists) {
@@ -26,17 +35,20 @@ export async function loadDataFromFirebase() {
             return null;
         }
     } catch (error) {
-        console.error("Error loading data:", error);
+        handleError(error, 'Error loading data from Firestore');
         throw error;
     }
 }
 
 export async function saveDataToFirebase(data) {
     try {
+        if (!navigator.onLine) {
+            throw new Error('No internet connection');
+        }
         await db.collection('appData').doc('currentData').set(data);
         console.log("Data saved successfully");
     } catch (error) {
-        console.error("Error saving data:", error);
+        handleError(error, 'Error saving data to Firestore');
         throw error;
     }
 }
