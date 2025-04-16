@@ -3,7 +3,6 @@ import { extractPlaceholders } from './utils.js';
 
 let currentScreen = 'initial';
 let isSidebarListVisible = false;
-let justSelectedTemplate = false;
 
 export function toggleTheme() {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
@@ -57,15 +56,10 @@ export function showScreen(screenId) {
         loadCategoryDropdown();
         loadTemplateDropdown();
         showFields();
-        const emailTypeInput = document.getElementById('emailType');
-        if (emailTypeInput === document.activeElement) {
-            emailTypeInput.blur();
-        }
     }
     if (screenId === 'editTemplates') {
         loadCategoryDropdown();
         loadEditTemplatesDropdown();
-        updatePreview();
     }
 }
 
@@ -80,52 +74,21 @@ export function toggleEditList() {
     sidebarListOptions.style.display = isSidebarListVisible ? 'flex' : 'none';
 }
 
-export function clearInput(element) {
-    if (!justSelectedTemplate) {
-        element.value = '';
-        const dropdownId = element.id + 'Dropdown';
-        filterDropdown(element.id, dropdownId);
-    }
-    justSelectedTemplate = false;
-}
-
 export function loadTemplateDropdown() {
-    const dropdown = document.getElementById('emailTypeDropdown');
+    const dropdown = document.getElementById('emailType');
     const categorySelect = document.getElementById('categorySelect');
     const selectedCategory = categorySelect ? categorySelect.value : '';
-    dropdown.innerHTML = '';
+    dropdown.innerHTML = '<option value="">Select a template</option>';
     const templates = getTemplates();
     const filteredTemplates = Object.keys(templates)
         .filter(key => !selectedCategory || templates[key].category === selectedCategory)
         .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     filteredTemplates.forEach(key => {
-        const option = document.createElement('div');
-        option.className = 'dropdown-option';
+        const option = document.createElement('option');
+        option.value = key;
         option.textContent = key;
-        option.setAttribute('tabindex', '0');
-        option.setAttribute('role', 'option');
-        option.setAttribute('aria-label', key);
-        option.addEventListener('click', () => {
-            document.getElementById('emailType').value = key;
-            justSelectedTemplate = true;
-            showFields();
-            hideDropdown('emailTypeDropdown');
-        });
-        option.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                document.getElementById('emailType').value = key;
-                justSelectedTemplate = true;
-                showFields();
-                hideDropdown('emailTypeDropdown');
-            }
-        });
         dropdown.appendChild(option);
     });
-    const emailTypeInput = document.getElementById('emailType');
-    if (emailTypeInput.value && !filteredTemplates.includes(emailTypeInput.value)) {
-        emailTypeInput.value = '';
-        showFields();
-    }
 }
 
 export function showFields() {
@@ -211,27 +174,36 @@ export function showFields() {
         if (placeholder === 'car' || placeholder === 'car1' || placeholder === 'car2' || placeholder === 'carSPA' || placeholder === 'carNUR') {
             fields += `
                 <label for="${id}">${label}:</label>
-                <input type="text" id="${id}" list="${id}-list" autocomplete="off" placeholder="Type to search cars">
-                <datalist id="${id}-list">
-                    ${cars.map(car => `<option value="${car.name}">`).join('')}
-                </datalist>
+                <select id="${id}">
+                    <option value="">Select a car</option>
+                    ${cars.map(car => `<option value="${car.name}">${car.name}</option>`).join('')}
+                </select>
             `;
         } else if (placeholder === 'taxi') {
             fields += `
                 <label for="${id}">${label}:</label>
-                <select id="${id}">${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}</select>
+                <select id="${id}">
+                    <option value="">Select a taxi</option>
+                    ${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}
+                </select>
             `;
         } else if (placeholder === 'hotel') {
             fields += `
                 <label for="${id}">${label}:</label>
-                <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}</select>
+                <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">
+                    <option value="">Select a hotel</option>
+                    ${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}
+                </select>
                 <label for="${id}Email">Hotel Email:</label>
                 <input type="email" id="${id}Email" readonly>
             `;
         } else if (placeholder === 'package' || placeholder === 'packageSPA' || placeholder === 'packageNUR') {
             fields += `
                 <label for="${id}">${label}:</label>
-                <select id="${id}">${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}</select>
+                <select id="${id}">
+                    <option value="">Select a package</option>
+                    ${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}
+                </select>
             `;
         } else if (['date', 'date1', 'date2', 'dateSPA', 'dateNUR'].includes(placeholder)) {
             fields += `
@@ -370,33 +342,18 @@ export function toggleDeposit(index) {
 }
 
 export function loadEditTemplatesDropdown() {
-    const dropdown = document.getElementById('templateSelectDropdown');
+    const dropdown = document.getElementById('templateSelect');
     const categorySelect = document.getElementById('categorySelect');
     const selectedCategory = categorySelect ? categorySelect.value : '';
-    dropdown.innerHTML = '';
+    dropdown.innerHTML = '<option value="">Select a template</option>';
     const templates = getTemplates();
     const filteredTemplates = Object.keys(templates)
         .filter(key => !selectedCategory || templates[key].category === selectedCategory)
         .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     filteredTemplates.forEach(key => {
-        const option = document.createElement('div');
-        option.className = 'dropdown-option';
+        const option = document.createElement('option');
+        option.value = key;
         option.textContent = key;
-        option.setAttribute('tabindex', '0');
-        option.setAttribute('role', 'option');
-        option.setAttribute('aria-label', key);
-        option.addEventListener('click', () => {
-            document.getElementById('templateSelect').value = key;
-            loadTemplateToEdit();
-            hideDropdown('templateSelectDropdown');
-        });
-        option.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                document.getElementById('templateSelect').value = key;
-                loadTemplateToEdit();
-                hideDropdown('templateSelectDropdown');
-            }
-        });
         dropdown.appendChild(option);
     });
     loadTemplateToEdit();
@@ -419,7 +376,6 @@ export function loadTemplateToEdit() {
         excelColumnsList.innerHTML = '';
         stepsEditList.innerHTML = '';
         categoryInput.value = '';
-        updatePreview();
         return;
     }
 
@@ -433,9 +389,9 @@ export function loadTemplateToEdit() {
         excelColumnsList.innerHTML += `
             <div class="list-item">
                 <label>Column Name:</label>
-                <input type="text" value="${col.column}" id="excelColumn-${index}" oninput="updatePreview()">
+                <input type="text" value="${col.column}" id="excelColumn-${index}">
                 <label>Default Value:</label>
-                <input type="text" value="${col.value || ''}" id="excelValue-${index}" oninput="updatePreview()">
+                <input type="text" value="${col.value || ''}" id="excelValue-${index}">
                 <button onclick="removeExcelColumn(${index})">Remove</button>
             </div>
         `;
@@ -447,21 +403,18 @@ export function loadTemplateToEdit() {
         stepsEditList.innerHTML += `
             <div class="list-item">
                 <label>Step Name:</label>
-                <input type="text" value="${step.name}" id="stepName-${index}" oninput="updatePreview()">
+                <input type="text" value="${step.name}" id="stepName-${index}">
                 <label>Description:</label>
-                <textarea id="stepDesc-${index}" oninput="updatePreview()">${step.description}</textarea>
+                <textarea id="stepDesc-${index}">${step.description}</textarea>
                 <button onclick="removeStep(${index})">Remove</button>
             </div>
         `;
     });
-
-    updatePreview();
 }
 
 export function loadCategoryDropdown() {
     const categorySelect = document.getElementById('categorySelect');
-    const categoryList = document.getElementById('categoryList');
-    const categoryDropdown = document.getElementById('categoryDropdown');
+    const categoryInput = document.getElementById('templateCategory');
     const categories = getCategories();
     
     if (categorySelect) {
@@ -474,104 +427,13 @@ export function loadCategoryDropdown() {
         });
     }
     
-    if (categoryList && categoryDropdown) {
-        categoryList.innerHTML = categories.map(category => `<option value="${category}">`).join('');
-        categoryDropdown.innerHTML = '';
+    if (categoryInput) {
+        categoryInput.innerHTML = '<option value="">Select a category</option>';
         categories.forEach(category => {
-            const option = document.createElement('div');
-            option.className = 'dropdown-option';
+            const option = document.createElement('option');
+            option.value = category;
             option.textContent = category;
-            option.setAttribute('tabindex', '0');
-            option.setAttribute('role', 'option');
-            option.setAttribute('aria-label', category);
-            option.addEventListener('click', () => {
-                document.getElementById('templateCategory').value = category;
-                hideDropdown('categoryDropdown');
-            });
-            option.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    document.getElementById('templateCategory').value = category;
-                    hideDropdown('categoryDropdown');
-                }
-            });
-            categoryDropdown.appendChild(option);
+            categoryInput.appendChild(option);
         });
     }
-}
-
-export function showDropdown(dropdownId) {
-    const dropdown = document.getElementById(dropdownId);
-    if (!dropdown) {
-        console.warn(`Dropdown (${dropdownId}) not found`);
-        return;
-    }
-    dropdown.classList.add('visible');
-    const inputId = dropdownId.replace('Dropdown', '');
-    if (!document.getElementById(inputId)) {
-        console.warn(`Input (${inputId}) not found for dropdown (${dropdownId})`);
-        return;
-    }
-    filterDropdown(inputId, dropdownId);
-}
-
-export function hideDropdown(dropdownId) {
-    setTimeout(() => {
-        const dropdown = document.getElementById(dropdownId);
-        if (!dropdown.contains(document.activeElement)) {
-            dropdown.classList.remove('visible');
-        }
-    }, 100);
-}
-
-export function filterDropdown(inputId, dropdownId) {
-    const input = document.getElementById(inputId);
-    const dropdown = document.getElementById(dropdownId);
-    if (!input || !dropdown) {
-        console.warn(`Input (${inputId}) or dropdown (${dropdownId}) not found`);
-        return;
-    }
-    const options = dropdown.getElementsByClassName('dropdown-option');
-    const filter = input.value.toLowerCase();
-
-    let hasVisibleOptions = false;
-    Array.from(options).forEach(option => {
-        const text = option.textContent.toLowerCase();
-        if (text.includes(filter)) {
-            option.style.display = '';
-            hasVisibleOptions = true;
-        } else {
-            option.style.display = 'none';
-        }
-    });
-
-    dropdown.classList.toggle('visible', hasVisibleOptions && input === document.activeElement);
-}
-
-export function updateCategoryDropdown() {
-    const input = document.getElementById('templateCategory');
-    const dropdown = document.getElementById('categoryDropdown');
-    const filter = input.value.toLowerCase();
-    const options = dropdown.getElementsByClassName('dropdown-option');
-    
-    let hasVisibleOptions = false;
-    Array.from(options).forEach(option => {
-        const text = option.textContent.toLowerCase();
-        if (text.includes(filter)) {
-            option.style.display = '';
-            hasVisibleOptions = true;
-        } else {
-            option.style.display = 'none';
-        }
-    });
-    
-    dropdown.classList.toggle('visible', hasVisibleOptions && input === document.activeElement);
-}
-
-export function updatePreview() {
-    // Note: Preview functionality is commented out in the HTML, so this is a placeholder
-    const select = document.getElementById('templateSelect');
-    if (!select.value) {
-        return;
-    }
-    // Implement preview logic if needed when re-enabling preview section
 }
