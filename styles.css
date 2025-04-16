@@ -431,6 +431,25 @@ textarea {
     margin-left: auto;
 }
 
+/* Pagination */
+#templatePagination, #listPagination, #editTemplatePagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+#templatePagination button, #listPagination button, #editTemplatePagination button {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+#templatePagination span, #listPagination span, #editTemplatePagination span {
+    font-size: 14px;
+    color: var(--text-color);
+}
+
 /* Animation effects */
 @keyframes slideIn {
     from { transform: translateY(20px); opacity: 0; }
