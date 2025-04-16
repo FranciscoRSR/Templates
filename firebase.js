@@ -10,11 +10,13 @@ const firebaseConfig = {
 };
 
 let db;
+let auth;
 
 export function initializeFirebase() {
     try {
         const app = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        auth = firebase.auth();
     } catch (error) {
         handleError(error, 'Failed to initialize Firebase');
     }
@@ -25,6 +27,11 @@ export async function loadDataFromFirebase(collectionName, pageSize = 10, lastDo
         console.log(`Loading ${collectionName} from Firestore...`);
         if (!navigator.onLine) {
             throw new Error('No internet connection');
+        }
+        // Check if user is authenticated
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error('User is not authenticated');
         }
         let query = db.collection('appData').doc('currentData').collection(collectionName).orderBy('name').limit(pageSize);
         if (lastDoc) {
@@ -45,6 +52,10 @@ export async function saveDataToFirebase(data) {
         if (!navigator.onLine) {
             throw new Error('No internet connection');
         }
+        const user = auth.currentUser;
+        if (!user) {
+            throw new Error('User is not authenticated');
+        }
         const batch = db.batch();
         for (const [key, value] of Object.entries(data)) {
             const docRef = db.collection('appData').doc('currentData').collection(key);
@@ -57,6 +68,17 @@ export async function saveDataToFirebase(data) {
         console.log("Data saved successfully");
     } catch (error) {
         handleError(error, 'Error saving data to Firestore');
+        throw error;
+    }
+}
+
+// Add a function to handle authentication
+export async function signIn(email, password) {
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        console.log('User signed in successfully');
+    } catch (error) {
+        handleError(error, 'Failed to sign in');
         throw error;
     }
 }
