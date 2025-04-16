@@ -1,6 +1,6 @@
 import { initializeFirebase } from './firebase.js';
 import { loadData } from './dataManager.js';
-import { toggleTheme, loadTheme, toggleSidebar, showScreen, toggleInitialEditList, toggleEditList, clearInput, showFields, autoFillHotelEmailDynamic, showListEditor, toggleDeposit, loadCategoryDropdown, loadTemplateDropdown, filterDropdown, showDropdown, hideDropdown, updateCategoryDropdown, loadEditTemplatesDropdown, loadTemplateToEdit } from './uiRenderer.js';
+import { toggleTheme, loadTheme, toggleSidebar, showScreen, toggleInitialEditList, toggleEditList, showFields, autoFillHotelEmailDynamic, showListEditor, toggleDeposit, loadCategoryDropdown, loadTemplateDropdown, loadTemplateToEdit } from './uiRenderer.js';
 import { generateEmail, addItem, removeItem, saveList, addNewTemplate, renameExistingTemplate, addExcelColumn, removeExcelColumn, addStep, removeStep, saveTemplate, deleteExistingTemplate } from './templateManager.js';
 import { copyToClipboard, copyExcelInfo } from './utils.js';
 
@@ -10,7 +10,6 @@ window.toggleSidebar = toggleSidebar;
 window.showScreen = showScreen;
 window.toggleInitialEditList = toggleInitialEditList;
 window.toggleEditList = toggleEditList;
-window.clearInput = clearInput;
 window.showFields = showFields;
 window.autoFillHotelEmailDynamic = autoFillHotelEmailDynamic;
 window.showListEditor = showListEditor;
@@ -22,10 +21,6 @@ window.addItem = addItem;
 window.removeItem = removeItem;
 window.saveList = saveList;
 window.loadTemplateToEdit = loadTemplateToEdit;
-window.filterDropdown = filterDropdown;
-window.showDropdown = showDropdown;
-window.hideDropdown = hideDropdown;
-window.updateCategoryDropdown = updateCategoryDropdown;
 window.addExcelColumn = addExcelColumn;
 window.removeExcelColumn = removeExcelColumn;
 window.addStep = addStep;
@@ -99,15 +94,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.isSidebarListVisible = true;
         showScreen('editList');
         showListEditor('packages');
-    });
-
-    // Dropdown click handling
-    document.addEventListener('click', (e) => {
-        const dropdowns = document.getElementsByClassName('dropdown-options');
-        Array.from(dropdowns).forEach(dropdown => {
-            if (!dropdown.contains(e.target) && !e.target.closest('.searchable-dropdown input')) {
-                dropdown.classList.remove('visible');
-            }
-        });
     });
 });
