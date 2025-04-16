@@ -1,5 +1,6 @@
 import { getCars, getTemplates, saveAllData, updateList, addTemplate, renameTemplate, deleteTemplate, updateTemplate } from './dataManager.js';
 import { extractPlaceholders } from './utils.js';
+import { handleValidationError, handleSuccess, handleError } from './errorHandler.js';
 
 const sampleData = {
     car: "Porsche 911",
@@ -53,7 +54,7 @@ export function generateEmail() {
     const emailType = emailTypeInput.value;
     const templates = getTemplates();
     if (!emailType || !templates[emailType]) {
-        alert('Please select a valid template.');
+        handleValidationError('Please select a valid template.');
         return;
     }
 
@@ -80,19 +81,19 @@ export function generateEmail() {
         if (['car', 'car1', 'car2', 'carSPA', 'carNUR'].includes(input.id)) {
             const carExists = getCars().some(car => car.name === input.value);
             if (!carExists && input.value) {
-                alert(`Invalid car name for ${input.id}: ${input.value}`);
+                handleValidationError(`Invalid car name for ${input.id}: ${input.value}`);
                 return;
             }
         }
     });
 
     if (missingFields.length > 0) {
-        alert(`Please fill in all fields: ${missingFields.join(', ')}`);
+        handleValidationError(`Please fill in all required fields: ${missingFields.join(', ')}`);
         return;
     }
 
     if (document.querySelector('#fields input:invalid')) {
-        alert('Please correct invalid inputs.');
+        handleValidationError('Please correct invalid inputs.');
         return;
     }
 
@@ -102,19 +103,26 @@ export function generateEmail() {
     dateFields.forEach(field => {
         if (values[field]) {
             const date = new Date(values[field]);
-            if (!isNaN(date)) {
-                dateValues[field] = {
-                    day: date.getDate().toString().padStart(2, '0'),
-                    month: date.toLocaleString('default', { month: 'long' }),
-                    year: date.getFullYear(),
-                    fullDate: `${date.getDate().toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
-                };
+            if (isNaN(date)) {
+                handleValidationError(`Invalid date format for ${field}`);
+                return;
             }
+            dateValues[field] = {
+                day: date.getDate().toString().padStart(2, '0'),
+                month: date.toLocaleString('default', { month: 'long' }),
+                year: date.getFullYear(),
+                fullDate: `${date.getDate().toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`
+            };
         }
     });
 
     let arrivalTime = '';
     if (values['time']) {
+        const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(values['time'])) {
+            handleValidationError('Invalid time format for time field (e.g., 08:00)');
+            return;
+        }
         const [hours, minutes] = values['time'].split(':').map(Number);
         const adjustedHours = hours - 1;
         arrivalTime = `${adjustedHours.toString().padStart(2, '0')}:${minutes ? minutes.toString().padStart(2, '0') : '00'}`;
@@ -220,7 +228,7 @@ Finally, deposits are required for the following: ${depositList}. I will send yo
     const computedPlaceholders = ['arrivalTime', 'depositSection', 'day', 'month', 'year', 'Day1', 'Month1', 'Year1', 'day2', 'month2', 'year2', 'daySPA', 'monthSPA', 'yearSPA', 'dayNUR', 'monthNUR', 'yearNUR', 'originalexcess', 'insuranceexcess', 'insuranceprice'];
     const missingPlaceholders = uniquePlaceholders.filter(p => !computedPlaceholders.includes(p) && (!replacements[p] || replacements[p].trim() === ''));
     if (missingPlaceholders.length > 0) {
-        alert(`The following placeholders are missing values: ${missingPlaceholders.join(', ')}`);
+        handleValidationError(`The following placeholders are missing values: ${missingPlaceholders.join(', ')}`);
         return;
     }
 
@@ -291,7 +299,10 @@ Finally, deposits are required for the following: ${depositList}. I will send yo
 
 export async function addItem(listType) {
     const name = document.getElementById('newItemName').value.trim();
-    if (!name) return;
+    if (!name) {
+        handleValidationError('Item name is required.');
+        return;
+    }
 
     let newItem;
     switch (listType) {
@@ -301,6 +312,10 @@ export async function addItem(listType) {
             const originalExcess = parseInt(document.getElementById('originalExcess').value) || 0;
             const insuranceExcess = parseInt(document.getElementById('insuranceExcess').value) || 0;
             const raceIncPrice = parseInt(document.getElementById('raceIncPrice').value) || 0;
+            if (requiresDeposit && depositAmount <= 0) {
+                handleValidationError('Deposit amount must be greater than 0 when deposit is required.');
+                return;
+            }
             newItem = { 
                 name, 
                 requiresDeposit, 
@@ -316,7 +331,15 @@ export async function addItem(listType) {
             break;
         case 'hotels':
             const email = document.getElementById('newItemEmail').value.trim();
-            if (!email) return;
+            if (!email) {
+                handleValidationError('Hotel email is required.');
+                return;
+            }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                handleValidationError('Invalid email format.');
+                return;
+            }
             newItem = { name, email };
             updateList(listType, [...getHotels(), newItem]);
             break;
@@ -324,7 +347,12 @@ export async function addItem(listType) {
             updateList(listType, [...getPackages(), name]);
             break;
     }
-    await saveAllData();
+    try {
+        await saveAllData();
+        handleSuccess(`${listType.charAt(0).toUpperCase() + listType.slice(1)} item added successfully!`);
+    } catch (error) {
+        handleError(error, `Failed to save ${listType} item`);
+    }
 }
 
 export function removeItem(listType, index) {
@@ -335,6 +363,10 @@ export function removeItem(listType, index) {
         case 'hotels': list = getHotels(); break;
         case 'packages': list = getPackages(); break;
     }
+    if (index < 0 || index >= list.length) {
+        handleValidationError('Invalid item index.');
+        return;
+    }
     list.splice(index, 1);
     updateList(listType, list);
 }
@@ -344,57 +376,101 @@ export async function saveList() {
     let newList;
     switch (listType) {
         case 'cars':
-            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => ({
-                name: document.getElementById(`carName-${index}`).value,
-                requiresDeposit: document.querySelector(`#listItems .list-item:nth-child(${index + 1}) input[type='checkbox']`).checked,
-                depositAmount: parseInt(document.getElementById(`carDeposit-${index}`).value) || 0,
-                originalExcess: parseInt(document.getElementById(`carOriginalExcess-${index}`).value) || 0,
-                insuranceExcess: parseInt(document.getElementById(`carInsuranceExcess-${index}`).value) || 0,
-                raceIncPrice: parseInt(document.getElementById(`carRaceIncPrice-${index}`).value) || 0
-            }));
+            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => {
+                const name = document.getElementById(`carName-${index}`).value.trim();
+                if (!name) {
+                    handleValidationError(`Car name at index ${index + 1} is required.`);
+                    throw new Error('Validation failed');
+                }
+                const requiresDeposit = document.querySelector(`#listItems .list-item:nth-child(${index + 1}) input[type='checkbox']`).checked;
+                const depositAmount = parseInt(document.getElementById(`carDeposit-${index}`).value) || 0;
+                if (requiresDeposit && depositAmount <= 0) {
+                    handleValidationError(`Deposit amount for car at index ${index + 1} must be greater than 0.`);
+                    throw new Error('Validation failed');
+                }
+                return {
+                    name,
+                    requiresDeposit,
+                    depositAmount,
+                    originalExcess: parseInt(document.getElementById(`carOriginalExcess-${index}`).value) || 0,
+                    insuranceExcess: parseInt(document.getElementById(`carInsuranceExcess-${index}`).value) || 0,
+                    raceIncPrice: parseInt(document.getElementById(`carRaceIncPrice-${index}`).value) || 0
+                };
+            });
             break;
         case 'taxis':
-            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => document.getElementById(`taxi-${index}`).value);
+            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => {
+                const value = document.getElementById(`taxi-${index}`).value.trim();
+                if (!value) {
+                    handleValidationError(`Taxi name at index ${index + 1} is required.`);
+                    throw new Error('Validation failed');
+                }
+                return value;
+            });
             break;
         case 'hotels':
-            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => ({
-                name: document.getElementById(`hotelName-${index}`).value,
-                email: document.getElementById(`hotelEmail-${index}`).value
-            }));
+            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => {
+                const name = document.getElementById(`hotelName-${index}`).value.trim();
+                const email = document.getElementById(`hotelEmail-${index}`).value.trim();
+                if (!name || !email) {
+                    handleValidationError(`Hotel name and email at index ${index + 1} are required.`);
+                    throw new Error('Validation failed');
+                }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    handleValidationError(`Invalid email format for hotel at index ${index + 1}.`);
+                    throw new Error('Validation failed');
+                }
+                return { name, email };
+            });
             break;
         case 'packages':
-            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => document.getElementById(`package-${index}`).value);
+            newList = Array.from(document.querySelectorAll('#listItems .list-item')).map((_, index) => {
+                const value = document.getElementById(`package-${index}`).value.trim();
+                if (!value) {
+                    handleValidationError(`Package name at index ${index + 1} is required.`);
+                    throw new Error('Validation failed');
+                }
+                return value;
+            });
             break;
     }
     
     updateList(listType, newList);
     try {
         await saveAllData();
-        alert(`${listType} list saved!`);
+        handleSuccess(`${listType.charAt(0).toUpperCase() + listType.slice(1)} list saved successfully!`);
     } catch (error) {
-        alert(`Error saving ${listType} list: ${error.message}`);
+        handleError(error, `Failed to save ${listType} list`);
     }
 }
 
 export async function addNewTemplate() {
-    const name = prompt('Enter new template name:');
-    const category = prompt('Enter category for this template:') || 'Uncategorized';
-    const subject = prompt('Enter email subject for this template:') || '';
-    if (name) {
-        const success = addTemplate(name, category, subject);
-        if (success) {
+    const name = prompt('Enter new template name:')?.trim();
+    if (!name) {
+        handleValidationError('Template name is required.');
+        return false;
+    }
+    const category = prompt('Enter category for this template:')?.trim() || 'Uncategorized';
+    const subject = prompt('Enter email subject for this template:')?.trim() || '';
+    
+    const success = addTemplate(name, category, subject);
+    if (success) {
+        try {
             await saveAllData();
             document.getElementById('templateSelect').value = name;
             document.getElementById('templateCategory').value = category;
             document.getElementById('templateSubject').value = subject;
-            alert('Template added successfully!');
+            handleSuccess('Template added successfully!');
             return true;
-        } else {
-            alert('Template name already exists!');
+        } catch (error) {
+            handleError(error, 'Failed to save new template');
             return false;
         }
+    } else {
+        handleValidationError('Template name already exists!');
+        return false;
     }
-    return false;
 }
 
 export async function renameExistingTemplate() {
@@ -402,23 +478,33 @@ export async function renameExistingTemplate() {
     const currentName = templateInput.value;
     
     if (!currentName) {
-        alert('Please select a template to rename.');
+        handleValidationError('Please select a template to rename.');
         return false;
     }
     
-    const newName = prompt('Enter new template name:', currentName);
-    const newCategory = prompt('Enter new category:', getTemplates()[currentName].category || 'Uncategorized');
-    const newSubject = prompt('Enter new email subject:', getTemplates()[currentName].subject || '');
+    const newName = prompt('Enter new template name:', currentName)?.trim();
+    if (!newName) {
+        handleValidationError('New template name is required.');
+        return false;
+    }
+    const newCategory = prompt('Enter new category:', getTemplates()[currentName].category || 'Uncategorized')?.trim() || 'Uncategorized';
+    const newSubject = prompt('Enter new email subject:', getTemplates()[currentName].subject || '')?.trim() || '';
+    
     const success = renameTemplate(currentName, newName, newCategory, newSubject);
     if (success) {
-        await saveAllData();
-        document.getElementById('templateSelect').value = newName;
-        document.getElementById('templateCategory').value = newCategory;
-        document.getElementById('templateSubject').value = newSubject;
-        alert('Template renamed successfully!');
-        return true;
+        try {
+            await saveAllData();
+            document.getElementById('templateSelect').value = newName;
+            document.getElementById('templateCategory').value = newCategory;
+            document.getElementById('templateSubject').value = newSubject;
+            handleSuccess('Template renamed successfully!');
+            return true;
+        } catch (error) {
+            handleError(error, 'Failed to rename template');
+            return false;
+        }
     } else {
-        alert('Template name already exists!');
+        handleValidationError('Template name already exists!');
         return false;
     }
 }
@@ -428,16 +514,18 @@ export function addExcelColumn() {
     const templateKey = templateInput.value;
     const templates = getTemplates();
     if (!templateKey || !templates[templateKey]) {
-        alert('Please select a valid template first.');
+        handleValidationError('Please select a valid template first.');
         return;
     }
-    const columnName = prompt('Enter Excel column name:');
-    if (columnName) {
-        const columnValue = prompt('Enter default value for this column (optional):') || '';
-        const template = templates[templateKey];
-        template.excelInfo = template.excelInfo || [];
-        template.excelInfo.push({ column: columnName, value: columnValue });
+    const columnName = prompt('Enter Excel column name:')?.trim();
+    if (!columnName) {
+        handleValidationError('Excel column name is required.');
+        return;
     }
+    const columnValue = prompt('Enter default value for this column (optional):')?.trim() || '';
+    const template = templates[templateKey];
+    template.excelInfo = template.excelInfo || [];
+    template.excelInfo.push({ column: columnName, value: columnValue });
 }
 
 export function removeExcelColumn(index) {
@@ -445,7 +533,13 @@ export function removeExcelColumn(index) {
     const templateKey = templateInput.value;
     const templates = getTemplates();
     if (templateKey && templates[templateKey]) {
+        if (index < 0 || index >= templates[templateKey].excelInfo.length) {
+            handleValidationError('Invalid Excel column index.');
+            return;
+        }
         templates[templateKey].excelInfo.splice(index, 1);
+    } else {
+        handleValidationError('Please select a valid template.');
     }
 }
 
@@ -454,15 +548,17 @@ export function addStep() {
     const templateKey = templateInput.value;
     const templates = getTemplates();
     if (!templateKey || !templates[templateKey]) {
-        alert('Please select a valid template first.');
+        handleValidationError('Please select a valid template first.');
         return;
     }
-    const stepName = prompt('Enter step name:');
-    if (stepName) {
-        const template = templates[templateKey];
-        template.steps = template.steps || [];
-        template.steps.push({ name: stepName, description: '' });
+    const stepName = prompt('Enter step name:')?.trim();
+    if (!stepName) {
+        handleValidationError('Step name is required.');
+        return;
     }
+    const template = templates[templateKey];
+    template.steps = template.steps || [];
+    template.steps.push({ name: stepName, description: '' });
 }
 
 export function removeStep(index) {
@@ -470,7 +566,13 @@ export function removeStep(index) {
     const templateKey = templateInput.value;
     const templates = getTemplates();
     if (templateKey && templates[templateKey]) {
+        if (index < 0 || index >= templates[templateKey].steps.length) {
+            handleValidationError('Invalid step index.');
+            return;
+        }
         templates[templateKey].steps.splice(index, 1);
+    } else {
+        handleValidationError('Please select a valid template.');
     }
 }
 
@@ -483,44 +585,75 @@ export async function saveTemplate() {
     const stepsEditList = document.getElementById('stepsEditList');
     const categoryInput = document.getElementById('templateCategory');
     
-    if (templateKey && getTemplates()[templateKey]) {
-        const templateData = {
-            body: textarea.value,
-            subject: subjectInput.value,
-            excelInfo: Array.from(excelColumnsList.querySelectorAll('.list-item')).map((_, index) => ({
-                column: document.getElementById(`excelColumn-${index}`).value,
-                value: document.getElementById(`excelValue-${index}`).value
-            })),
-            steps: Array.from(stepsEditList.querySelectorAll('.list-item')).map((_, index) => ({
-                name: document.getElementById(`stepName-${index}`).value,
-                description: document.getElementById(`stepDesc-${index}`).value
-            })),
-            category: categoryInput.value || 'Uncategorized'
-        };
-        
-        const success = updateTemplate(templateKey, templateData);
-        if (success) {
+    if (!templateKey || !getTemplates()[templateKey]) {
+        handleValidationError('Please select a valid template.');
+        return false;
+    }
+
+    const templateData = {
+        body: textarea.value.trim(),
+        subject: subjectInput.value.trim(),
+        excelInfo: Array.from(excelColumnsList.querySelectorAll('.list-item')).map((_, index) => {
+            const column = document.getElementById(`excelColumn-${index}`).value.trim();
+            if (!column) {
+                handleValidationError(`Excel column name at index ${index + 1} is required.`);
+                throw new Error('Validation failed');
+            }
+            return {
+                column,
+                value: document.getElementById(`excelValue-${index}`).value.trim()
+            };
+        }),
+        steps: Array.from(stepsEditList.querySelectorAll('.list-item')).map((_, index) => {
+            const name = document.getElementById(`stepName-${index}`).value.trim();
+            if (!name) {
+                handleValidationError(`Step name at index ${index + 1} is required.`);
+                throw new Error('Validation failed');
+            }
+            return {
+                name,
+                description: document.getElementById(`stepDesc-${index}`).value.trim()
+            };
+        }),
+        category: categoryInput.value.trim() || 'Uncategorized'
+    };
+    
+    const success = updateTemplate(templateKey, templateData);
+    if (success) {
+        try {
             await saveAllData();
-            alert('Template saved!');
+            handleSuccess('Template saved successfully!');
             return true;
+        } catch (error) {
+            handleError(error, 'Failed to save template');
+            return false;
         }
     }
-    alert('Please select a valid template.');
+    handleValidationError('Failed to update template.');
     return false;
 }
 
 export async function deleteExistingTemplate() {
     const templateInput = document.getElementById('templateSelect');
     const templateKey = templateInput.value;
-    if (templateKey && getTemplates()[templateKey] && confirm(`Delete ${templateKey}?`)) {
+    if (!templateKey || !getTemplates()[templateKey]) {
+        handleValidationError('Please select a valid template.');
+        return false;
+    }
+    if (confirm(`Delete ${templateKey}?`)) {
         const success = deleteTemplate(templateKey);
         if (success) {
-            await saveAllData();
-            templateInput.value = '';
-            document.getElementById('templateCategory').value = '';
-            document.getElementById('templateBody').value = '';
-            alert('Template deleted successfully!');
-            return true;
+            try {
+                await saveAllData();
+                templateInput.value = '';
+                document.getElementById('templateCategory').value = '';
+                document.getElementById('templateBody').value = '';
+                handleSuccess('Template deleted successfully!');
+                return true;
+            } catch (error) {
+                handleError(error, 'Failed to delete template');
+                return false;
+            }
         }
     }
     return false;
