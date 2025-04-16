@@ -1,3 +1,5 @@
+import { handleSuccess, handleError } from './errorHandler.js';
+
 export function extractPlaceholders(template) {
     const regex = /\{([^{}]+)\}/g;
     const matches = [];
@@ -10,20 +12,19 @@ export function extractPlaceholders(template) {
 
 export function copyToClipboard() {
     const body = document.getElementById('body').value;
-    navigator.clipboard.writeText(body).then(() => alert('Email body copied to clipboard!'));
+    navigator.clipboard.writeText(body)
+        .then(() => handleSuccess('Email body copied to clipboard!'))
+        .catch(err => handleError(err, 'Failed to copy email body'));
 }
 
 export function copyExcelInfo() {
     const data = window.currentExcelData;
     if (!data || !data.values.length) {
-        alert('No Excel data available to copy.');
+        handleError(new Error('No Excel data available'), 'Copy Excel Data');
         return;
     }
     const text = data.values.join('\t');
-    navigator.clipboard.writeText(text).then(() => {
-        alert('Excel values copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy Excel data:', err);
-        alert('Failed to copy Excel data.');
-    });
+    navigator.clipboard.writeText(text)
+        .then(() => handleSuccess('Excel values copied to clipboard!'))
+        .catch(err => handleError(err, 'Failed to copy Excel data'));
 }
