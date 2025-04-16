@@ -445,6 +445,15 @@ textarea {
     box-shadow: var(--shadow);
 }
 
+/* Toast Notifications */
+.toastify {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    border-radius: 5px;
+    box-shadow: var(--shadow);
+    color: var(--white);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
