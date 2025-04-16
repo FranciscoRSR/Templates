@@ -11,7 +11,7 @@ export function toggleTheme() {
 }
 
 const placeholderOrder = [
-    'name','surname', 'Customer Email','email' // Contact info first
+    'name','surname', 'Customer Email','email', // Contact info first
     'date', 'date1', 'date2', 'dateSPA', 'dateNUR', // Dates
     'time', 'firstTime', 'lastTime', // Times
     'car', 'car1', 'car2', 'carSPA', 'carNUR', // Cars
