@@ -1,4 +1,5 @@
 import { loadDataFromFirebase, saveDataToFirebase } from './firebase.js';
+import { handleError } from './errorHandler.js';
 
 let cars = [];
 let taxis = [];
@@ -58,7 +59,7 @@ export async function loadData() {
             await saveAllData();
         }
     } catch (error) {
-        console.error("Failed to load data, using defaults:", error);
+        handleError(error, 'Failed to load application data');
         cars = defaultData.cars;
         taxis = defaultData.taxis;
         hotels = defaultData.hotels;
@@ -78,7 +79,7 @@ export async function saveAllData() {
             templates
         });
     } catch (error) {
-        alert("Error saving data to database");
+        handleError(error, 'Failed to save data to database');
         throw error;
     }
 }
@@ -125,6 +126,10 @@ export function updateList(listType, newList) {
 }
 
 export function addTemplate(name, category, subject) {
+    if (!name || !name.trim()) {
+        handleValidationError('Template name is required.');
+        return false;
+    }
     if (!templates[name]) {
         templates[name] = {
             body: '',
@@ -143,6 +148,10 @@ export function addTemplate(name, category, subject) {
 }
 
 export function renameTemplate(oldName, newName, newCategory, newSubject) {
+    if (!newName || !newName.trim()) {
+        handleValidationError('New template name is required.');
+        return false;
+    }
     if (newName && newName !== oldName && !templates[newName]) {
         templates[newName] = { ...templates[oldName], category: newCategory || 'Uncategorized', subject: newSubject || '' };
         delete templates[oldName];
@@ -164,23 +173,25 @@ export function renameTemplate(oldName, newName, newCategory, newSubject) {
 }
 
 export function deleteTemplate(name) {
-    if (templates[name]) {
-        const deletedCategory = templates[name].category;
-        delete templates[name];
-        categories = [...new Set(Object.values(templates).map(t => t.category))].sort();
-        return true;
+    if (!name || !templates[name]) {
+        handleValidationError('Invalid template name.');
+        return false;
     }
-    return false;
+    const deletedCategory = templates[name].category;
+    delete templates[name];
+    categories = [...new Set(Object.values(templates).map(t => t.category))].sort();
+    return true;
 }
 
 export function updateTemplate(name, templateData) {
-    if (templates[name]) {
-        templates[name] = templateData;
-        if (!categories.includes(templateData.category)) {
-            categories.push(templateData.category);
-            categories.sort();
-        }
-        return true;
+    if (!name || !templates[name]) {
+        handleValidationError('Invalid template name.');
+        return false;
     }
-    return false;
+    templates[name] = templateData;
+    if (!categories.includes(templateData.category)) {
+        categories.push(templateData.category);
+        categories.sort();
+    }
+    return true;
 }
