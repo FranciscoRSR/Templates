@@ -16,7 +16,7 @@ const placeholderOrder = [
     'time', 'firstTime', 'lastTime', // Times
     'car', 'car1', 'car2', 'carSPA', 'carNUR', // Cars
     'kms', 'Laps', // Numeric fields
-    'Laps of instruction'
+    'Laps of instruction',
     'package', 'packageSPA', 'packageNUR', // Packages
     'Voucher Number',
     'Voucher Package',
