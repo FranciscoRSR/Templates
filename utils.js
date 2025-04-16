@@ -28,3 +28,15 @@ export function copyExcelInfo() {
         .then(() => handleSuccess('Excel values copied to clipboard!'))
         .catch(err => handleError(err, 'Failed to copy Excel data'));
 }
+
+export function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
