@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RSR Email Generator</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Other head content -->
     <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
@@ -58,7 +57,6 @@
             </div>
         </div>
 
-        <!-- Remaining HTML unchanged -->
         <div id="templatesScreen" class="screen hidden">
             <h2>Generate Email</h2>
             <div class="form-section">
@@ -67,10 +65,9 @@
                     <option value="">All Categories</option>
                 </select>
                 <label for="emailType">Select Template:</label>
-                <div class="searchable-dropdown">
-                    <input type="text" id="emailType" autocomplete="off" placeholder="Search templates..." oninput="showFields(); filterDropdown('emailType', 'emailTypeDropdown')" onfocus="showDropdown('emailTypeDropdown'); clearInput(this)" onblur="hideDropdown('emailTypeDropdown')">
-                    <div id="emailTypeDropdown" class="dropdown-options hidden"></div>
-                </div>
+                <select id="emailType" onchange="showFields()">
+                    <option value="">Select a template</option>
+                </select>
                 <div id="fields" class="fields"></div>
                 <button id="generateBtn" onclick="generateEmail()" disabled>Generate Email</button>
             </div>
@@ -106,21 +103,18 @@
             <h2>Edit Templates</h2>
             <div class="form-section">
                 <label for="templateSelect">Select Template:</label>
-                <div class="searchable-dropdown">
-                    <input type="text" id="templateSelect" autocomplete="off" placeholder="Search templates..." oninput="loadTemplateToEdit(); filterDropdown('templateSelect', 'templateSelectDropdown')" onfocus="showDropdown('templateSelectDropdown'); clearInput(this)" onblur="hideDropdown('templateSelectDropdown')">
-                    <div id="templateSelectDropdown" class="dropdown-options hidden"></div>
-                </div>
+                <select id="templateSelect" onchange="loadTemplateToEdit()">
+                    <option value="">Select a template</option>
+                </select>
                 <label for="templateCategory">Template Category:</label>
-                <div class="searchable-dropdown">
-                    <input type="text" id="templateCategory" placeholder="Enter or select category..." list="categoryList" oninput="updateCategoryDropdown()" onfocus="showDropdown('categoryDropdown'); clearInput(this)" onblur="hideDropdown('categoryDropdown')">
-                    <datalist id="categoryList"></datalist>
-                    <div id="categoryDropdown" class="dropdown-options hidden"></div>
-                </div>
+                <select id="templateCategory">
+                    <option value="">Select a category</option>
+                </select>
                 <label for="templateSubject">Template Subject:</label>
-                <input type="text" id="templateSubject" placeholder="Enter email subject..." oninput="updatePreview()">
+                <input type="text" id="templateSubject" placeholder="Enter email subject...">
                 <div class="template-input">
                     <label for="templateBody">Template Body:</label>
-                    <textarea id="templateBody" rows="10" oninput="updatePreview()"></textarea>
+                    <textarea id="templateBody" rows="10"></textarea>
                     <h3>Excel Columns</h3>
                     <div id="excelColumnsList"></div>
                     <div class="button-group">
@@ -142,5 +136,4 @@
         </div>
     </div>
     <script type="module" src="script.js"></script>
-</body>
 </html>
