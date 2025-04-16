@@ -354,6 +354,12 @@ select, input, textarea {
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
     background-color: var(--input-background);
     color: var(--text-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
 }
 
 select:focus, input:focus, textarea:focus {
@@ -432,82 +438,17 @@ textarea {
 }
 
 /* Template Edit Container */
-.template-edit-container {
-    display: flex;
-    gap: 20px;
-    margin-top: 20px;
-}
-
-.template-input, .template-preview {
-    flex: 1;
+.template-input {
     background: var(--content-background);
     padding: 15px;
     border-radius: 8px;
     box-shadow: var(--shadow);
 }
 
-.template-preview {
-    border: 1px solid var(--border-color);
-}
-
-.preview-content {
-    margin-top: 10px;
-}
-
-#previewBody {
-    white-space: pre-wrap;
-    background-color: var(--input-background);
-    padding: 10px;
-    border-radius: 5px;
-    min-height: 200px;
-}
-
-#previewExcelTable {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-#previewExcelTable th, #previewExcelTable td {
-    border: 1px solid var(--border-color);
-    padding: 8px;
-    text-align: left;
-}
-
-#previewExcelTable th {
-    background-color: var(--table-header-bg);
-    font-weight: 600;
-}
-
-#previewStepsList {
-    padding-left: 20px;
-}
-
-#previewStepsList li {
-    margin-bottom: 15px;
-}
-
-#previewStepsList li strong {
-    display: block;
-    color: var(--primary-color);
-    margin-bottom: 5px;
-}
-
-#previewStepsList li p {
-    margin: 0;
-    color: var(--text-color);
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
         padding-top: 70px;
-    }
-
-    .category-dropdown select,
-    .category-dropdown input {
-        font-size: 13px;
-        padding: 10px;
     }
 
     .hamburger {
@@ -517,7 +458,7 @@ textarea {
     .sidebar {
         transform: translateX(-100%);
         width: 250px;
-        display: flex; /* Ensure display is flex when not hidden */
+        display: flex;
     }
 
     .sidebar.hidden {
@@ -573,14 +514,6 @@ textarea {
         margin-top: 10px;
         width: 100%;
     }
-
-    .template-edit-container {
-        flex-direction: column;
-    }
-
-    .template-preview {
-        margin-top: 20px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -598,12 +531,6 @@ textarea {
 
     .button-container {
         width: 100%;
-    }
-
-    .category-dropdown select,
-    .category-dropdown input {
-        font-size: 12px;
-        padding: 8px;
     }
 
     button {
@@ -624,87 +551,6 @@ textarea {
     gap: 10px;
     flex-wrap: wrap;
     justify-content: center;
-}
-
-input[list] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: var(--input-background);
-    color: var(--text-color);
-}
-
-input[list]:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
-}
-
-.searchable-dropdown {
-    position: relative;
-    width: 100%;
-}
-
-.searchable-dropdown input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: var(--input-background);
-    color: var(--text-color);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.searchable-dropdown input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
-}
-
-.dropdown-options {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    background-color: var(--content-background);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    box-shadow: var(--shadow);
-    z-index: 1000;
-    display: none;
-}
-
-.dropdown-options.visible {
-    display: block !important;
-}
-
-.dropdown-option {
-    padding: 10px 15px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-color);
-    transition: background-color 0.2s ease;
-}
-
-.dropdown-option:hover,
-.dropdown-option.selected {
-    background-color: var(--primary-color);
-    color: var(--white);
-}
-
-.dropdown-option:focus {
-    outline: none;
-    background-color: var(--primary-color);
-    color: var(--white);
-}
-
-datalist {
-    display: none;
 }
 
 #excelInfoSection, #stepsSection {
@@ -795,71 +641,3 @@ datalist {
         width: 100%;
     }
 }
-/* Search Input for Template Selection */
-input[list="emailTypeList"], input[list="templateSelectList"] {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: var(--input-background);
-    color: var(--text-color);
-}
-
-input[list="emailTypeList"]:focus, input[list="templateSelectList"]:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
-}
-
-/* Category Dropdown */
-.category-dropdown {
-    position: relative;
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-.category-dropdown select,
-.category-dropdown input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: var(--input-background);
-    color: var(--text-color);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    -webkit-appearance: none; /* Remove default select styling */
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-}
-
-.category-dropdown select:focus,
-.category-dropdown input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
-    outline: none;
-}
-
-.category-dropdown .dropdown-options {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    background-color: var(--content-background);
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    box-shadow: var(--shadow);
-    z-index: 1000;
-    display: none;
-}
-
-.category-dropdown .dropdown-options.visible {
-    display: block;
-}
-
