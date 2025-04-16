@@ -1,9 +1,8 @@
-import { getCars, getTaxis, getHotels, getPackages, getTemplates, getCategories, loadData } from './dataManager.js';
+import { getCars, getTaxis, getHotels, getPackages, getTemplates, getCategories } from './dataManager.js';
 import { extractPlaceholders } from './utils.js';
 
 let currentScreen = 'initial';
 let isSidebarListVisible = false;
-const pageSize = 10;
 
 export function toggleTheme() {
     const isDark = document.body.getAttribute('data-theme') === 'dark';
@@ -62,9 +61,6 @@ export function showScreen(screenId) {
         loadCategoryDropdown();
         loadEditTemplatesDropdown();
     }
-    if (screenId === 'editList') {
-        showListEditor(currentScreen.listType || 'cars');
-    }
 }
 
 export function toggleInitialEditList() {
@@ -78,54 +74,32 @@ export function toggleEditList() {
     sidebarListOptions.style.display = isSidebarListVisible ? 'flex' : 'none';
 }
 
-export async function loadTemplateDropdown(page = 1) {
+export function loadTemplateDropdown() {
     const dropdown = document.getElementById('emailType');
     const categorySelect = document.getElementById('categorySelect');
     const selectedCategory = categorySelect ? categorySelect.value : '';
-    const fragment = document.createDocumentFragment();
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Select a template';
-    fragment.appendChild(defaultOption);
-
-    await loadData('templates', pageSize);
+    dropdown.innerHTML = '<option value="">Select a template</option>';
     const templates = getTemplates();
     const filteredTemplates = Object.keys(templates)
         .filter(key => !selectedCategory || templates[key].category === selectedCategory)
-        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
-        .slice((page - 1) * pageSize, page * pageSize);
-
+        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     filteredTemplates.forEach(key => {
         const option = document.createElement('option');
         option.value = key;
         option.textContent = key;
-        fragment.appendChild(option);
+        dropdown.appendChild(option);
     });
-
-    dropdown.innerHTML = '';
-    dropdown.appendChild(fragment);
-
-    // Add pagination controls
-    const paginationDiv = document.getElementById('templatePagination') || document.createElement('div');
-    paginationDiv.id = 'templatePagination';
-    paginationDiv.innerHTML = `
-        <button onclick="loadTemplateDropdown(${page - 1})" ${page === 1 ? 'disabled' : ''}>Previous</button>
-        <span>Page ${page}</span>
-        <button onclick="loadTemplateDropdown(${page + 1})">Next</button>
-    `;
-    dropdown.parentElement.appendChild(paginationDiv);
 }
 
 export function showFields() {
     const emailTypeInput = document.getElementById('emailType');
     const emailType = emailTypeInput.value;
     const fieldsDiv = document.getElementById('fields');
-    const fragment = document.createDocumentFragment();
+    fieldsDiv.innerHTML = '';
     const templates = getTemplates();
     document.getElementById('generateBtn').disabled = !emailType || !templates[emailType];
 
     if (!emailType || !templates[emailType]) {
-        fieldsDiv.innerHTML = '';
         return;
     }
 
@@ -188,6 +162,7 @@ export function showFields() {
 
     placeholders = [...new Set(placeholders)].sort();
 
+    let fields = '';
     const cars = getCars();
     const taxis = getTaxis();
     const hotels = getHotels();
@@ -195,107 +170,65 @@ export function showFields() {
 
     placeholders.forEach(placeholder => {
         const id = placeholder;
-        const label = document.createElement('label');
-        label.htmlFor = id;
-        label.textContent = placeholder.charAt(0).toUpperCase() + placeholder.slice(1) + ':';
-        fragment.appendChild(label);
-
+        const label = placeholder.charAt(0).toUpperCase() + placeholder.slice(1);
         if (placeholder === 'car' || placeholder === 'car1' || placeholder === 'car2' || placeholder === 'carSPA' || placeholder === 'carNUR') {
-            const select = document.createElement('select');
-            select.id = id;
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a car';
-            select.appendChild(defaultOption);
-            cars.forEach(car => {
-                const option = document.createElement('option');
-                option.value = car.name;
-                option.textContent = car.name;
-                select.appendChild(option);
-            });
-            fragment.appendChild(select);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}">
+                    <option value="">Select a car</option>
+                    ${cars.map(car => `<option value="${car.name}">${car.name}</option>`).join('')}
+                </select>
+            `;
         } else if (placeholder === 'taxi') {
-            const select = document.createElement('select');
-            select.id = id;
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a taxi';
-            select.appendChild(defaultOption);
-            taxis.forEach(taxi => {
-                const option = document.createElement('option');
-                option.value = taxi;
-                option.textContent = taxi;
-                select.appendChild(option);
-            });
-            fragment.appendChild(select);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}">
+                    <option value="">Select a taxi</option>
+                    ${taxis.map(taxi => `<option value="${taxi}">${taxi}</option>`).join('')}
+                </select>
+            `;
         } else if (placeholder === 'hotel') {
-            const select = document.createElement('select');
-            select.id = id;
-            select.setAttribute('onchange', `autoFillHotelEmailDynamic('${id}')`);
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a hotel';
-            select.appendChild(defaultOption);
-            hotels.forEach(hotel => {
-                const option = document.createElement('option');
-                option.value = hotel.name;
-                option.textContent = hotel.name;
-                select.appendChild(option);
-            });
-            fragment.appendChild(select);
-
-            const emailLabel = document.createElement('label');
-            emailLabel.htmlFor = `${id}Email`;
-            emailLabel.textContent = 'Hotel Email:';
-            fragment.appendChild(emailLabel);
-
-            const emailInput = document.createElement('input');
-            emailInput.type = 'email';
-            emailInput.id = `${id}Email`;
-            emailInput.readOnly = true;
-            fragment.appendChild(emailInput);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}" onchange="autoFillHotelEmailDynamic('${id}')">
+                    <option value="">Select a hotel</option>
+                    ${hotels.map(hotel => `<option value="${hotel.name}">${hotel.name}</option>`).join('')}
+                </select>
+                <label for="${id}Email">Hotel Email:</label>
+                <input type="email" id="${id}Email" readonly>
+            `;
         } else if (placeholder === 'package' || placeholder === 'packageSPA' || placeholder === 'packageNUR') {
-            const select = document.createElement('select');
-            select.id = id;
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a package';
-            select.appendChild(defaultOption);
-            packages.forEach(pkg => {
-                const option = document.createElement('option');
-                option.value = pkg;
-                option.textContent = pkg;
-                select.appendChild(option);
-            });
-            fragment.appendChild(select);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <select id="${id}">
+                    <option value="">Select a package</option>
+                    ${packages.map(pkg => `<option value="${pkg}">${pkg}</option>`).join('')}
+                </select>
+            `;
         } else if (['date', 'date1', 'date2', 'dateSPA', 'dateNUR'].includes(placeholder)) {
-            const input = document.createElement('input');
-            input.type = 'date';
-            input.id = id;
-            fragment.appendChild(input);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="date" id="${id}">
+            `;
         } else if (placeholder.includes('time') || placeholder === 'firstTime' || placeholder === 'lastTime') {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.id = id;
-            input.placeholder = 'e.g., 08:00';
-            fragment.appendChild(input);
+            fields += `
+                <label for="${id}">${label} (e.g., 08:00):</label>
+                <input type="text" id="${id}" placeholder="e.g., 08:00">
+            `;
         } else if (placeholder === 'kms' || placeholder === 'Laps') {
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.id = id;
-            input.min = '0';
-            input.step = '1';
-            fragment.appendChild(input);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="number" id="${id}" min="0" step="1">
+            `;
         } else if (placeholder !== 'arrivalTime' && placeholder !== 'depositSection' && placeholder !== 'day' && placeholder !== 'month' && placeholder !== 'year' && placeholder !== 'day1' && placeholder !== 'month1' && placeholder !== 'year1' && placeholder !== 'Day1' && placeholder !== 'Month1' && placeholder !== 'Year1' && placeholder !== 'day2' && placeholder !== 'month2' && placeholder !== 'year2' && placeholder !== 'daySPA' && placeholder !== 'monthSPA' && placeholder !== 'yearSPA' && placeholder !== 'dayNUR' && placeholder !== 'monthNUR' && placeholder !== 'yearNUR' && placeholder !== 'originalexcess' && placeholder !== 'insuranceexcess' && placeholder !== 'insuranceprice') {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.id = id;
-            fragment.appendChild(input);
+            fields += `
+                <label for="${id}">${label}:</label>
+                <input type="text" id="${id}">
+            `;
         }
     });
 
-    fieldsDiv.innerHTML = '';
-    fieldsDiv.appendChild(fragment);
+    fieldsDiv.innerHTML = fields;
 }
 
 export function autoFillHotelEmailDynamic(hotelId) {
@@ -306,17 +239,16 @@ export function autoFillHotelEmailDynamic(hotelId) {
     hotelEmail.value = selectedHotel ? selectedHotel.email : '';
 }
 
-export async function showListEditor(listType) {
-    currentScreen.listType = listType;
+export function showListEditor(listType) {
     const editor = document.getElementById('listEditor');
     editor.classList.remove('hidden');
     document.getElementById('listTitle').textContent = `Edit ${listType.charAt(0).toUpperCase() + listType.slice(1)}`;
 
     const itemsDiv = document.getElementById('listItems');
     const newItemForm = document.getElementById('newItemForm');
-    const fragment = document.createDocumentFragment();
+    itemsDiv.innerHTML = '';
+    newItemForm.innerHTML = '';
 
-    await loadData(listType, pageSize);
     let list = [];
     switch (listType) {
         case 'cars':
@@ -340,24 +272,23 @@ export async function showListEditor(listType) {
                 document.getElementById('depositAmount').disabled = !this.checked;
             });
             list.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `
-                    <label>Name:</label>
-                    <input type="text" value="${item.name}" id="carName-${index}">
-                    <label>Deposit:</label>
-                    <input type="checkbox" ${item.requiresDeposit ? 'checked' : ''} onchange="toggleDeposit(${index})">
-                    <label>Deposit Amount:</label>
-                    <input type="number" value="${item.depositAmount}" id="carDeposit-${index}" ${item.requiresDeposit ? '' : 'disabled'}>
-                    <label>Original Excess:</label>
-                    <input type="number" value="${item.originalExcess || 0}" id="carOriginalExcess-${index}" min="0">
-                    <label>Insurance Excess:</label>
-                    <input type="number" value="${item.insuranceExcess || 0}" id="carInsuranceExcess-${index}" min="0">
-                    <label>RaceINC Price:</label>
-                    <input type="number" value="${item.raceIncPrice || 0}" id="carRaceIncPrice-${index}" min="0">
-                    <button onclick="removeItem('cars', ${index})">Remove</button>
+                itemsDiv.innerHTML += `
+                    <div class="list-item">
+                        <label>Name:</label>
+                        <input type="text" value="${item.name}" id="carName-${index}">
+                        <label>Deposit:</label>
+                        <input type="checkbox" ${item.requiresDeposit ? 'checked' : ''} onchange="toggleDeposit(${index})">
+                        <label>Deposit Amount:</label>
+                        <input type="number" value="${item.depositAmount}" id="carDeposit-${index}" ${item.requiresDeposit ? '' : 'disabled'}>
+                        <label>Original Excess:</label>
+                        <input type="number" value="${item.originalExcess || 0}" id="carOriginalExcess-${index}" min="0">
+                        <label>Insurance Excess:</label>
+                        <input type="number" value="${item.insuranceExcess || 0}" id="carInsuranceExcess-${index}" min="0">
+                        <label>RaceINC Price:</label>
+                        <input type="number" value="${item.raceIncPrice || 0}" id="carRaceIncPrice-${index}" min="0">
+                        <button onclick="removeItem('cars', ${index})">Remove</button>
+                    </div>
                 `;
-                fragment.appendChild(div);
             });
             break;
         case 'taxis':
@@ -368,10 +299,7 @@ export async function showListEditor(listType) {
                 <button onclick="addItem('taxis')">Add</button>
             `;
             list.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `<input type="text" value="${item}" id="taxi-${index}"><button onclick="removeItem('taxis', ${index})">Remove</button>`;
-                fragment.appendChild(div);
+                itemsDiv.innerHTML += `<div class="list-item"><input type="text" value="${item}" id="taxi-${index}"><button onclick="removeItem('taxis', ${index})">Remove</button></div>`;
             });
             break;
         case 'hotels':
@@ -384,14 +312,13 @@ export async function showListEditor(listType) {
                 <button onclick="addItem('hotels')">Add</button>
             `;
             list.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `
-                    <input type="text" value="${item.name}" id="hotelName-${index}">
-                    <input type="email" value="${item.email}" id="hotelEmail-${index}">
-                    <button onclick="removeItem('hotels', ${index})">Remove</button>
+                itemsDiv.innerHTML += `
+                    <div class="list-item">
+                        <input type="text" value="${item.name}" id="hotelName-${index}">
+                        <input type="email" value="${item.email}" id="hotelEmail-${index}">
+                        <button onclick="removeItem('hotels', ${index})">Remove</button>
+                    </div>
                 `;
-                fragment.appendChild(div);
             });
             break;
         case 'packages':
@@ -402,26 +329,10 @@ export async function showListEditor(listType) {
                 <button onclick="addItem('packages')">Add</button>
             `;
             list.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `<input type="text" value="${item}" id="package-${index}"><button onclick="removeItem('packages', ${index})">Remove</button>`;
-                fragment.appendChild(div);
+                itemsDiv.innerHTML += `<div class="list-item"><input type="text" value="${item}" id="package-${index}"><button onclick="removeItem('packages', ${index})">Remove</button></div>`;
             });
             break;
     }
-
-    itemsDiv.innerHTML = '';
-    itemsDiv.appendChild(fragment);
-
-    // Add pagination controls
-    const paginationDiv = document.getElementById('listPagination') || document.createElement('div');
-    paginationDiv.id = 'listPagination';
-    paginationDiv.innerHTML = `
-        <button onclick="showListEditor('${listType}', ${page - 1})" ${page === 1 ? 'disabled' : ''}>Previous</button>
-        <span>Page ${page}</span>
-        <button onclick="showListEditor('${listType}', ${page + 1})">Next</button>
-    `;
-    itemsDiv.parentElement.appendChild(paginationDiv);
 }
 
 export function toggleDeposit(index) {
@@ -430,43 +341,21 @@ export function toggleDeposit(index) {
     if (checkbox && depositInput) depositInput.disabled = !checkbox.checked;
 }
 
-export async function loadEditTemplatesDropdown(page = 1) {
+export function loadEditTemplatesDropdown() {
     const dropdown = document.getElementById('templateSelect');
     const categorySelect = document.getElementById('categorySelect');
     const selectedCategory = categorySelect ? categorySelect.value : '';
-    const fragment = document.createDocumentFragment();
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Select a template';
-    fragment.appendChild(defaultOption);
-
-    await loadData('templates', pageSize);
+    dropdown.innerHTML = '<option value="">Select a template</option>';
     const templates = getTemplates();
     const filteredTemplates = Object.keys(templates)
         .filter(key => !selectedCategory || templates[key].category === selectedCategory)
-        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))
-        .slice((page - 1) * pageSize, page * pageSize);
-
+        .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
     filteredTemplates.forEach(key => {
         const option = document.createElement('option');
         option.value = key;
         option.textContent = key;
-        fragment.appendChild(option);
+        dropdown.appendChild(option);
     });
-
-    dropdown.innerHTML = '';
-    dropdown.appendChild(fragment);
-
-    // Add pagination controls
-    const paginationDiv = document.getElementById('editTemplatePagination') || document.createElement('div');
-    paginationDiv.id = 'editTemplatePagination';
-    paginationDiv.innerHTML = `
-        <button onclick="loadEditTemplatesDropdown(${page - 1})" ${page === 1 ? 'disabled' : ''}>Previous</button>
-        <span>Page ${page}</span>
-        <button onclick="loadEditTemplatesDropdown(${page + 1})">Next</button>
-    `;
-    dropdown.parentElement.appendChild(paginationDiv);
-
     loadTemplateToEdit();
 }
 
@@ -493,75 +382,58 @@ export function loadTemplateToEdit() {
     textarea.value = typeof template === 'string' ? template : template.body || '';
     subjectInput.value = template.subject || '';
     categoryInput.value = template.category || 'Uncategorized';
-
-    const excelFragment = document.createDocumentFragment();
+    
+    excelColumnsList.innerHTML = '';
     const excelInfo = template.excelInfo || [];
     excelInfo.forEach((col, index) => {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = `
-            <label>Column Name:</label>
-            <input type="text" value="${col.column}" id="excelColumn-${index}">
-            <label>Default Value:</label>
-            <input type="text" value="${col.value || ''}" id="excelValue-${index}">
-            <button onclick="removeExcelColumn(${index})">Remove</button>
+        excelColumnsList.innerHTML += `
+            <div class="list-item">
+                <label>Column Name:</label>
+                <input type="text" value="${col.column}" id="excelColumn-${index}">
+                <label>Default Value:</label>
+                <input type="text" value="${col.value || ''}" id="excelValue-${index}">
+                <button onclick="removeExcelColumn(${index})">Remove</button>
+            </div>
         `;
-        excelFragment.appendChild(div);
     });
-    excelColumnsList.innerHTML = '';
-    excelColumnsList.appendChild(excelFragment);
 
-    const stepsFragment = document.createDocumentFragment();
+    stepsEditList.innerHTML = '';
     const steps = template.steps || [];
     steps.forEach((step, index) => {
-        const div = document.createElement('div');
-        div.className = 'list-item';
-        div.innerHTML = `
-            <label>Step Name:</label>
-            <input type="text" value="${step.name}" id="stepName-${index}">
-            <label>Description:</label>
-            <textarea id="stepDesc-${index}">${step.description}</textarea>
-            <button onclick="removeStep(${index})">Remove</button>
+        stepsEditList.innerHTML += `
+            <div class="list-item">
+                <label>Step Name:</label>
+                <input type="text" value="${step.name}" id="stepName-${index}">
+                <label>Description:</label>
+                <textarea id="stepDesc-${index}">${step.description}</textarea>
+                <button onclick="removeStep(${index})">Remove</button>
+            </div>
         `;
-        stepsFragment.appendChild(div);
     });
-    stepsEditList.innerHTML = '';
-    stepsEditList.appendChild(stepsFragment);
 }
 
 export function loadCategoryDropdown() {
     const categorySelect = document.getElementById('categorySelect');
     const categoryInput = document.getElementById('templateCategory');
     const categories = getCategories();
-    const fragment = document.createDocumentFragment();
-
+    
     if (categorySelect) {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'All Categories';
-        fragment.appendChild(defaultOption);
+        categorySelect.innerHTML = '<option value="">All Categories</option>';
         categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
-            fragment.appendChild(option);
+            categorySelect.appendChild(option);
         });
-        categorySelect.innerHTML = '';
-        categorySelect.appendChild(fragment);
     }
-
+    
     if (categoryInput) {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select a category';
-        fragment.appendChild(defaultOption);
+        categoryInput.innerHTML = '<option value="">Select a category</option>';
         categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
-            fragment.appendChild(option);
+            categoryInput.appendChild(option);
         });
-        categoryInput.innerHTML = '';
-        categoryInput.appendChild(fragment);
     }
 }
