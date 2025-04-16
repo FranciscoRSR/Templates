@@ -70,7 +70,6 @@
                 <select id="emailType" onchange="showFields()">
                     <option value="">Select a template</option>
                 </select>
-                <div id="templatePagination"></div>
                 <div id="fields" class="fields"></div>
                 <button id="generateBtn" onclick="generateEmail()" disabled>Generate Email</button>
             </div>
@@ -97,7 +96,6 @@
             <div id="listEditor" class="hidden">
                 <h3 id="listTitle"></h3>
                 <div id="listItems"></div>
-                <div id="listPagination"></div>
                 <div id="newItemForm"></div>
                 <button onclick="saveList()">Save Changes</button>
             </div>
@@ -110,7 +108,6 @@
                 <select id="templateSelect" onchange="loadTemplateToEdit()">
                     <option value="">Select a template</option>
                 </select>
-                <div id="editTemplatePagination"></div>
                 <label for="templateCategory">Template Category:</label>
                 <select id="templateCategory">
                     <option value="">Select a category</option>
@@ -141,5 +138,5 @@
         </div>
     </div>
     <script type="module" src="script.js"></script>
-</body>
-</html>
+</body> 
+</html>    
