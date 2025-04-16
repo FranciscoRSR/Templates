@@ -1,14 +1,12 @@
 import { loadDataFromFirebase, saveDataToFirebase } from './firebase.js';
 import { handleError } from './errorHandler.js';
 
-let dataCache = {
-    cars: { items: [], lastDoc: null, hasMore: true },
-    taxis: { items: [], lastDoc: null, hasMore: true },
-    hotels: { items: [], lastDoc: null, hasMore: true },
-    packages: { items: [], lastDoc: null, hasMore: true },
-    templates: { items: {}, lastDoc: null, hasMore: true },
-    categories: []
-};
+let cars = [];
+let taxis = [];
+let hotels = [];
+let packages = [];
+let templates = {};
+let categories = [];
 
 const defaultData = {
     cars: [],
@@ -18,51 +16,68 @@ const defaultData = {
     templates: {}
 };
 
-export async function loadData(collectionName, pageSize = 10) {
+export async function loadData() {
     try {
-        const cache = dataCache[collectionName];
-        if (!cache.hasMore && cache.items.length > 0) {
-            return cache.items;
-        }
-        const { data, lastDoc } = await loadDataFromFirebase(collectionName, pageSize, cache.lastDoc);
-        cache.lastDoc = lastDoc;
-        cache.hasMore = data.length === pageSize;
-        if (collectionName === 'templates') {
-            data.forEach(item => {
-                cache.items[item.id] = {
-                    body: item.body || '',
-                    subject: item.subject || '',
-                    excelInfo: item.excelInfo || [],
-                    steps: item.steps || [],
-                    category: item.category || 'Uncategorized'
+        const data = await loadDataFromFirebase();
+        if (data) {
+            cars = data.cars || [];
+            taxis = data.taxis || [];
+            hotels = data.hotels || [];
+            packages = data.packages || [];
+            templates = {};
+            categories = [];
+            for (const [key, value] of Object.entries(data.templates || {})) {
+                const template = {
+                    body: typeof value === 'string' ? value : value.body || '',
+                    subject: value.subject || '',
+                    excelInfo: value.excelInfo || [],
+                    steps: value.steps || [],
+                    category: value.category || 'Uncategorized'
                 };
-                if (item.category && !dataCache.categories.includes(item.category)) {
-                    dataCache.categories.push(item.category);
+                templates[key] = template;
+                if (template.category && !categories.includes(template.category)) {
+                    categories.push(template.category);
                 }
-            });
-            dataCache.categories.sort();
+            }
+            categories.sort();
         } else {
-            cache.items.push(...data);
+            cars = defaultData.cars;
+            taxis = defaultData.taxis;
+            hotels = defaultData.hotels;
+            packages = defaultData.packages;
+            templates = {};
+            categories = ['Uncategorized'];
+            for (const [key, value] of Object.entries(defaultData.templates || {})) {
+                templates[key] = {
+                    body: value,
+                    subject: '',
+                    excelInfo: [],
+                    steps: [],
+                    category: 'Uncategorized'
+                };
+            }
+            await saveAllData();
         }
-        return cache.items;
     } catch (error) {
-        handleError(error, `Failed to load ${collectionName} data`);
-        dataCache[collectionName].items = defaultData[collectionName];
-        dataCache.categories = ['Uncategorized'];
-        return dataCache[collectionName].items;
+        handleError(error, 'Failed to load application data');
+        cars = defaultData.cars;
+        taxis = defaultData.taxis;
+        hotels = defaultData.hotels;
+        packages = defaultData.packages;
+        templates = defaultData.templates;
+        categories = ['Uncategorized'];
     }
 }
 
 export async function saveAllData() {
     try {
-        const dataToSave = {
-            cars: dataCache.cars.items,
-            taxis: dataCache.taxis.items,
-            hotels: dataCache.hotels.items,
-            packages: dataCache.packages.items,
-            templates: Object.values(dataCache.templates.items)
-        };
-        await saveDataToFirebase(dataToSave);
+        await saveDataToFirebase({
+            cars,
+            taxis,
+            hotels,
+            packages,
+            templates
+        });
     } catch (error) {
         handleError(error, 'Failed to save data to database');
         throw error;
@@ -70,31 +85,44 @@ export async function saveAllData() {
 }
 
 export function getCars() {
-    return dataCache.cars.items;
+    return cars;
 }
 
 export function getTaxis() {
-    return dataCache.taxis.items;
+    return taxis;
 }
 
 export function getHotels() {
-    return dataCache.hotels.items;
+    return hotels;
 }
 
 export function getPackages() {
-    return dataCache.packages.items;
+    return packages;
 }
 
 export function getTemplates() {
-    return dataCache.templates.items;
+    return templates;
 }
 
 export function getCategories() {
-    return dataCache.categories;
+    return categories;
 }
 
 export function updateList(listType, newList) {
-    dataCache[listType].items = newList;
+    switch (listType) {
+        case 'cars':
+            cars = newList;
+            break;
+        case 'taxis':
+            taxis = newList;
+            break;
+        case 'hotels':
+            hotels = newList;
+            break;
+        case 'packages':
+            packages = newList;
+            break;
+    }
 }
 
 export function addTemplate(name, category, subject) {
@@ -102,18 +130,17 @@ export function addTemplate(name, category, subject) {
         handleValidationError('Template name is required.');
         return false;
     }
-    if (!dataCache.templates.items[name]) {
-        dataCache.templates.items[name] = {
-            id: name,
+    if (!templates[name]) {
+        templates[name] = {
             body: '',
             subject: subject || '',
             excelInfo: [],
             steps: [],
             category: category || 'Uncategorized'
         };
-        if (!dataCache.categories.includes(category)) {
-            dataCache.categories.push(category);
-            dataCache.categories.sort();
+        if (!categories.includes(category)) {
+            categories.push(category);
+            categories.sort();
         }
         return true;
     }
@@ -125,20 +152,20 @@ export function renameTemplate(oldName, newName, newCategory, newSubject) {
         handleValidationError('New template name is required.');
         return false;
     }
-    if (newName && newName !== oldName && !dataCache.templates.items[newName]) {
-        dataCache.templates.items[newName] = { ...dataCache.templates.items[oldName], id: newName, category: newCategory || 'Uncategorized', subject: newSubject || '' };
-        delete dataCache.templates.items[oldName];
-        if (!dataCache.categories.includes(newCategory)) {
-            dataCache.categories.push(newCategory);
-            dataCache.categories.sort();
+    if (newName && newName !== oldName && !templates[newName]) {
+        templates[newName] = { ...templates[oldName], category: newCategory || 'Uncategorized', subject: newSubject || '' };
+        delete templates[oldName];
+        if (!categories.includes(newCategory)) {
+            categories.push(newCategory);
+            categories.sort();
         }
         return true;
     } else if (newName === oldName) {
-        dataCache.templates.items[oldName].category = newCategory;
-        dataCache.templates.items[oldName].subject = newSubject;
-        if (!dataCache.categories.includes(newCategory)) {
-            dataCache.categories.push(newCategory);
-            dataCache.categories.sort();
+        templates[oldName].category = newCategory;
+        templates[oldName].subject = newSubject;
+        if (!categories.includes(newCategory)) {
+            categories.push(newCategory);
+            categories.sort();
         }
         return true;
     }
@@ -146,24 +173,25 @@ export function renameTemplate(oldName, newName, newCategory, newSubject) {
 }
 
 export function deleteTemplate(name) {
-    if (!name || !dataCache.templates.items[name]) {
+    if (!name || !templates[name]) {
         handleValidationError('Invalid template name.');
         return false;
     }
-    delete dataCache.templates.items[name];
-    dataCache.categories = [...new Set(Object.values(dataCache.templates.items).map(t => t.category))].sort();
+    const deletedCategory = templates[name].category;
+    delete templates[name];
+    categories = [...new Set(Object.values(templates).map(t => t.category))].sort();
     return true;
 }
 
 export function updateTemplate(name, templateData) {
-    if (!name || !dataCache.templates.items[name]) {
+    if (!name || !templates[name]) {
         handleValidationError('Invalid template name.');
         return false;
     }
-    dataCache.templates.items[name] = { ...templateData, id: name };
-    if (!dataCache.categories.includes(templateData.category)) {
-        dataCache.categories.push(templateData.category);
-        dataCache.categories.sort();
+    templates[name] = templateData;
+    if (!categories.includes(templateData.category)) {
+        categories.push(templateData.category);
+        categories.sort();
     }
     return true;
 }
