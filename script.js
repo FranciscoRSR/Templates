@@ -41,63 +41,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         initializeFirebase();
         loadTheme();
-        await loadData();
         showScreen('initial');
+        // Load initial data lazily when needed
     } catch (error) {
         handleError(error, 'Application initialization failed');
     }
 
-    // Attach event listeners
-    document.getElementById('hamburgerBtn').addEventListener('click', toggleSidebar);
-    document.getElementById('themeToggle').addEventListener('change', toggleTheme);
-
-    // Sidebar buttons
-    document.getElementById('sidebar-generate-email').addEventListener('click', () => showScreen('templates'));
-    document.getElementById('sidebar-edit-templates').addEventListener('click', () => showScreen('editTemplates'));
-    document.getElementById('sidebar-edit-list').addEventListener('click', toggleEditList);
-    document.getElementById('sidebar-list-cars').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('cars');
-    });
-    document.getElementById('sidebar-list-taxis').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('taxis');
-    });
-    document.getElementById('sidebar-list-hotels').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('hotels');
-    });
-    document.getElementById('sidebar-list-packages').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('packages');
-    });
-
-    // Initial screen buttons
-    document.getElementById('initial-generate-email').addEventListener('click', () => showScreen('templates'));
-    document.getElementById('initial-edit-templates').addEventListener('click', () => showScreen('editTemplates'));
-    document.getElementById('initial-edit-list').addEventListener('click', toggleInitialEditList);
-    document.getElementById('initial-list-cars').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('cars');
-    });
-    document.getElementById('initial-list-taxis').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('taxis');
-    });
-    document.getElementById('initial-list-hotels').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('hotels');
-    });
-    document.getElementById('initial-list-packages').addEventListener('click', () => {
-        window.isSidebarListVisible = true;
-        showScreen('editList');
-        showListEditor('packages');
+    // Event delegation for buttons
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.id === 'hamburgerBtn') toggleSidebar();
+        if (target.id === 'themeToggle') toggleTheme();
+        if (target.id === 'sidebar-generate-email') showScreen('templates');
+        if (target.id === 'sidebar-edit-templates') showScreen('editTemplates');
+        if (target.id === 'sidebar-edit-list') toggleEditList();
+        if (target.id === 'sidebar-list-cars') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('cars');
+        }
+        if (target.id === 'sidebar-list-taxis') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('taxis');
+        }
+        if (target.id === 'sidebar-list-hotels') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('hotels');
+        }
+        if (target.id === 'sidebar-list-packages') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('packages');
+        }
+        if (target.id === 'initial-generate-email') showScreen('templates');
+        if (target.id === 'initial-edit-templates') showScreen('editTemplates');
+        if (target.id === 'initial-edit-list') toggleInitialEditList();
+        if (target.id === 'initial-list-cars') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('cars');
+        }
+        if (target.id === 'initial-list-taxis') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('taxis');
+        }
+        if (target.id === 'initial-list-hotels') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('hotels');
+        }
+        if (target.id === 'initial-list-packages') {
+            window.isSidebarListVisible = true;
+            showScreen('editList');
+            showListEditor('packages');
+        }
     });
 });
