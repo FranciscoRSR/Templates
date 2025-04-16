@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSR Email Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Other head content -->
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="header" id="appHeader">
+        <div class="header-content">
+            <button class="hamburger" id="hamburgerBtn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <img src="https://rsrbooking.com/assets/rsr-nurburg+spa-logo.svg" alt="RSR Nürburg+Spa Logo" class="header-logo">
+            <h1>Email Generator</h1>
+        </div>
+        <div class="theme-toggle">
+            <input type="checkbox" id="themeToggle">
+            <label for="themeToggle" class="theme-toggle-label">
+                <span class="theme-icon sun">☀</span>
+                <span class="theme-icon moon">☾</span>
+            </label>
+        </div>
+    </div>
+
+    <div id="sidebar" class="sidebar hidden">
+        <img src="https://rsrbooking.com/assets/rsr-nurburg+spa-logo.svg" alt="RSR Nürburg+Spa Logo" class="sidebar-logo">
+        <button id="sidebar-generate-email">Generate Email</button>
+        <button id="sidebar-edit-templates">Edit Templates</button>
+        <button id="sidebar-edit-list">Edit Lists</button>
+        <div id="sidebarListOptions" style="display: none;">
+            <button id="sidebar-list-cars">Cars</button>
+            <button id="sidebar-list-taxis">Taxis</button>
+            <button id="sidebar-list-hotels">Hotels</button>
+            <button id="sidebar-list-packages">Packages</button>
+        </div>
+    </div>
+
+    <div class="main-content" id="mainContent">
+        <div id="initialScreen" class="screen">
+            <h1>Welcome to RSR Email Generator</h1>
+            <div class="button-container">
+                <button id="initial-generate-email">Generate Email</button>
+                <button id="initial-edit-templates">Edit Templates</button>
+                <button id="initial-edit-list">Edit Lists</button>
+                <div id="initialListOptions" style="display: none;">
+                    <button id="initial-list-cars">Cars</button>
+                    <button id="initial-list-taxis">Taxis</button>
+                    <button id="initial-list-hotels">Hotels</button>
+                    <button id="initial-list-packages">Packages</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remaining HTML unchanged -->
+        <div id="templatesScreen" class="screen hidden">
+            <h2>Generate Email</h2>
+            <div class="form-section">
+                <label for="categorySelect">Select Category:</label>
+                <select id="categorySelect" onchange="filterTemplatesByCategory()">
+                    <option value="">All Categories</option>
+                </select>
+                <label for="emailType">Select Template:</label>
+                <div class="searchable-dropdown">
+                    <input type="text" id="emailType" autocomplete="off" placeholder="Search templates..." oninput="showFields(); filterDropdown('emailType', 'emailTypeDropdown')" onfocus="showDropdown('emailTypeDropdown'); clearInput(this)" onblur="hideDropdown('emailTypeDropdown')">
+                    <div id="emailTypeDropdown" class="dropdown-options hidden"></div>
+                </div>
+                <div id="fields" class="fields"></div>
+                <button id="generateBtn" onclick="generateEmail()" disabled>Generate Email</button>
+            </div>
+            <div id="result" class="result">
+                <h3>Generated Email</h3>
+                <label for="subject">Subject:</label>
+                <input type="text" id="subject" readonly>
+                <label for="body">Body:</label>
+                <textarea id="body" readonly></textarea>
+                <button onclick="copyToClipboard()">Copy to Clipboard</button>
+                <div id="excelInfoSection" class="hidden">
+                    <h3>Excel Information</h3>
+                    <button onclick="copyExcelInfo()">Copy Excel Data</button>
+                </div>
+                <div id="stepsSection" class="hidden">
+                    <h3>Steps Modifications</h3>
+                    <div id="stepsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="editListScreen" class="screen hidden">
+            <h2>Edit List</h2>
+            <div id="listEditor" class="hidden">
+                <h3 id="listTitle"></h3>
+                <div id="listItems"></div>
+                <div id="newItemForm"></div>
+                <button onclick="saveList()">Save Changes</button>
+            </div>
+        </div>
+
+        <div id="editTemplatesScreen" class="screen hidden">
+            <h2>Edit Templates</h2>
+            <div class="form-section">
+                <label for="templateSelect">Select Template:</label>
+                <div class="searchable-dropdown">
+                    <input type="text" id="templateSelect" autocomplete="off" placeholder="Search templates..." oninput="loadTemplateToEdit(); filterDropdown('templateSelect', 'templateSelectDropdown')" onfocus="showDropdown('templateSelectDropdown'); clearInput(this)" onblur="hideDropdown('templateSelectDropdown')">
+                    <div id="templateSelectDropdown" class="dropdown-options hidden"></div>
+                </div>
+                <label for="templateCategory">Template Category:</label>
+                <div class="searchable-dropdown">
+                    <input type="text" id="templateCategory" placeholder="Enter or select category..." list="categoryList" oninput="updateCategoryDropdown()" onfocus="showDropdown('categoryDropdown'); clearInput(this)" onblur="hideDropdown('categoryDropdown')">
+                    <datalist id="categoryList"></datalist>
+                    <div id="categoryDropdown" class="dropdown-options hidden"></div>
+                </div>
+                <label for="templateSubject">Template Subject:</label>
+                <input type="text" id="templateSubject" placeholder="Enter email subject..." oninput="updatePreview()">
+                <div class="template-input">
+                    <label for="templateBody">Template Body:</label>
+                    <textarea id="templateBody" rows="10" oninput="updatePreview()"></textarea>
+                    <h3>Excel Columns</h3>
+                    <div id="excelColumnsList"></div>
+                    <div class="button-group">
+                        <button onclick="addExcelColumn()">Add Excel Column</button>
+                    </div>
+                    <h3>Steps Modifications</h3>
+                    <div id="stepsEditList"></div>
+                    <div class="button-group">
+                        <button onclick="addStep()">Add Step</button>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button onclick="addTemplate()">Add New Template</button>
+                    <button onclick="renameTemplate()">Rename Template</button>
+                    <button onclick="saveTemplate()">Save Template</button>
+                    <button onclick="deleteTemplate()">Delete Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
