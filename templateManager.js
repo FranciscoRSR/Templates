@@ -1,4 +1,16 @@
-import { getCars, getTemplates, saveAllData, updateList, addTemplate, renameTemplate, deleteTemplate, updateTemplate } from './dataManager.js';
+import { 
+    getCars, 
+    getTaxis, 
+    getHotels,
+    getPackages, 
+    getTemplates, 
+    saveAllData, 
+    updateList, 
+    addTemplate, 
+    renameTemplate, 
+    deleteTemplate, 
+    updateTemplate 
+} from './dataManager.js';
 import { extractPlaceholders } from './utils.js';
 import { handleValidationError, handleSuccess, handleError } from './errorHandler.js';
 
